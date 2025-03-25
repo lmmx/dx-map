@@ -2,7 +2,8 @@
 
 A simple integration of MapLibre GL JS with Dioxus - a reactive UI framework for Rust.
 
-![MapLibre GL JS with Dioxus](https://github.com/user-attachments/assets/df55c43f-053c-4535-ba5d-0762b0c06055)
+![MapLibre GL JS with Dioxus](https://github.com/user-attachments/assets/75549769-a5fe-464e-9905-bb150b4a8881)
+
 
 ## Overview
 
