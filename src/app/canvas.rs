@@ -307,7 +307,7 @@ fn initialize_map_libre(map_id: &str) {
                         'source': 'stations',
                         'layout': {{
                             'text-field': ['get', 'name'],
-                            'text-font': ['Open Sans Regular'],
+                            'text-font': ['Noto Sans Regular'],
                             'text-offset': [0, 1.5],
                             'text-anchor': 'top'
                         }},
