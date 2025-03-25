@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use wasm_bindgen::{JsCast, JsValue};
 use log::info;
 
 #[component]
@@ -35,7 +34,7 @@ pub fn Canvas() -> Element {
 }
 #[cfg(feature = "web")]
 fn initialize_map_libre(map_id: &str) {
-    use wasm_bindgen::JsCast;
+    use wasm_bindgen::{JsCast, JsValue};
 
     let window = web_sys::window().expect("no global window exists");
     let document = window.document().expect("no document exists on window");
