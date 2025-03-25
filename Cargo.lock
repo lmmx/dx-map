@@ -2649,7 +2649,9 @@ dependencies = [
  "console_log",
  "dioxus",
  "dioxus-web",
+ "js-sys",
  "log",
+ "wasm-bindgen",
  "web-sys",
 ]
 
