@@ -1,7 +1,7 @@
 try {{
     const map = new maplibregl.Map({{
         container: '{}',
-        style: 'https://demotiles.maplibre.org/style.json',
+        style: 'https://tiles.openfreemap.org/styles/bright',
         center: [-0.1276, 51.5072], // London
         zoom: 12,
         maxBounds: [
