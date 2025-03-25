@@ -1,29 +1,42 @@
 use dioxus::prelude::*;
 use log::info;
+use super::TflLayers;
 
 #[component]
-pub fn Canvas() -> Element {
+pub fn Canvas(layers: Signal<TflLayers>) -> Element {
     let map_id = "maplibre-canvas";
+    let mut prev_layers = use_signal(|| None::<TflLayers>);
 
     // Create a use_effect to initialize the map after the component mounts
     use_effect(move || {
-        info!("Canvas mounted, initializing map");
+        info!("Canvas mounted, initializing TfL map");
         
-        // Run initialization code after the component has mounted
-        let init_script = include_str!("map_init.js");
-        
+        // Initialize the map with London coordinates
         initialize_map_libre(&map_id);
 
-        // // Cleanup function
-        // || {
-        //     info!("Canvas unmounting, cleanup would go here");
-        // }
+        // Check if layers changed
+        let current = *layers.read();
+        let mut prev = prev_layers.write();
+        
+        // If we have previous layers saved and they're different
+        if let Some(old_layers) = *prev {
+            if old_layers != current {
+                info!("Layers state changed");
+                update_layer_visibility(&current);
+            }
+        } else {
+            // First time - initialize
+            update_layer_visibility(&current);
+        }
+        
+        // Save current layers for next comparison
+        *prev = Some(current);
     });
 
     rsx! {
         div {
             id: "map-container",
-            style: "width: 100%; height: 600px; position: relative;",
+            style: "width: 100%; height: 100vh; position: relative;",
             
             div {
                 id: map_id,
@@ -32,6 +45,71 @@ pub fn Canvas() -> Element {
         }
     }
 }
+
+#[cfg(feature = "web")]
+fn update_layer_visibility(layers: &TflLayers) {
+    use wasm_bindgen::JsValue;
+    
+    // Convert our layers to a JavaScript object to pass to the map
+    let js_code = format!(r#"
+        if (window.mapInstance) {{
+            // Update tube layer visibility
+            if (window.mapInstance.getLayer('central-line-layer')) {{
+                window.mapInstance.setLayoutProperty(
+                    'central-line-layer', 
+                    'visibility', 
+                    {} ? 'visible' : 'none'
+                );
+            }}
+            if (window.mapInstance.getLayer('northern-line-layer')) {{
+                window.mapInstance.setLayoutProperty(
+                    'northern-line-layer', 
+                    'visibility', 
+                    {} ? 'visible' : 'none'
+                );
+            }}
+            
+            // Update overground layer visibility
+            if (window.mapInstance.getLayer('overground-line-layer')) {{
+                window.mapInstance.setLayoutProperty(
+                    'overground-line-layer', 
+                    'visibility', 
+                    {} ? 'visible' : 'none'
+                );
+            }}
+            
+            // Update stations layer visibility
+            if (window.mapInstance.getLayer('stations-layer')) {{
+                window.mapInstance.setLayoutProperty(
+                    'stations-layer', 
+                    'visibility', 
+                    {} ? 'visible' : 'none'
+                );
+            }}
+            if (window.mapInstance.getLayer('station-labels')) {{
+                window.mapInstance.setLayoutProperty(
+                    'station-labels', 
+                    'visibility', 
+                    {} ? 'visible' : 'none'
+                );
+            }}
+        }}
+    "#, 
+        layers.tube, 
+        layers.tube, 
+        layers.overground, 
+        layers.stations,
+        layers.stations
+    );
+    
+    let _ = js_sys::eval(&js_code);
+}
+
+#[cfg(not(feature = "web"))]
+fn update_layer_visibility(_layers: &TflLayers) {
+    // Do nothing on non-web targets
+}
+
 #[cfg(feature = "web")]
 fn initialize_map_libre(map_id: &str) {
     use wasm_bindgen::{JsCast, JsValue};
@@ -53,20 +131,7 @@ fn initialize_map_libre(map_id: &str) {
     // Set up an onload handler
     let map_container_id = map_id.to_string();
     let onload_handler = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-        let init_code = format!(r#"
-            try {{
-                const map = new maplibregl.Map({{
-                    container: '{}',
-                    style: 'https://demotiles.maplibre.org/style.json',
-                    center: [0, 0],
-                    zoom: 1
-                }});
-                map.addControl(new maplibregl.NavigationControl());
-                window.mapInstance = map;
-            }} catch(e) {{
-                console.error('Failed to initialize MapLibre map:', e);
-            }}
-        "#, map_container_id);
+        let init_code = format!(include_str!("./js/map_init.js"), map_container_id);
         
         let _ = js_sys::eval(&init_code);
     }) as Box<dyn FnMut()>);
