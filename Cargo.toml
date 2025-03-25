@@ -12,8 +12,7 @@ console_log = "1.0"
 dioxus = { version = "0.6.0", features = [] }
 dioxus-web = "0.6.3"
 log = "0.4"
-maplibre = { version = "0.0.3", features = ["web-webgl"] }
-web-sys = { version = "0.3", features = ["HtmlCanvasElement"] }
+web-sys = { version = "0.3", default-features = false, features = ["HtmlCanvasElement"] }
 
 [features]
 default = ["desktop"]
