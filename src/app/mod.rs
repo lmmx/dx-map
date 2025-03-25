@@ -14,14 +14,19 @@ pub fn app() -> Element {
         document::Link { rel: "stylesheet", href: MAIN_CSS }
 
         header {
-            h1 { "Hello World Map" }
-            nav {
-                ul {
-
-                }
-            }
+            class: "app-header",
+            h1 { "MapLibre GL JS with Dioxus" }
+            p { "Interactive map powered by MapLibre GL" }
         }
 
-        Canvas { }
+        main {
+            class: "app-content",
+            Canvas { }
+        }
+
+        footer {
+            class: "app-footer",
+            p { "Built with Dioxus and MapLibre GL JS" }
+        }
     }
 }
