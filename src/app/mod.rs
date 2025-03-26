@@ -1,13 +1,13 @@
 use dioxus::prelude::*;
 
 mod canvas;
-mod layer_panel;
 mod key_panel;
+mod layer_panel;
 mod simulation; // New module for vehicle simulation
 
 use canvas::Canvas;
-use layer_panel::LayerPanel;
 use key_panel::KeyPanel;
+use layer_panel::LayerPanel;
 use simulation::VehicleSimulation; // Import the simulation component
 
 // If you have images or CSS as assets, define them with Dioxus' asset! macro
@@ -65,7 +65,7 @@ pub fn app() -> Element {
         header {
             img { src: LOGO_SVG }
             p { "Real-time TfL network simulation" }
-            
+
             nav {
                 ul {
                     li { a { href: "#", "About" } }
@@ -77,14 +77,14 @@ pub fn app() -> Element {
 
         main {
             class: "app-content",
-            
+
             // Main map container
             Canvas { layers: layers }
-            
+
             // Controls for showing/hiding panels
             div {
                 class: "maplibregl-ctrl maplibregl-ctrl-group layer-controls",
-                
+
                 // Layers button
                 button {
                     class: "maplibregl-ctrl-layers",
@@ -95,7 +95,7 @@ pub fn app() -> Element {
                     },
                     "☰"
                 }
-                
+
                 // Key button
                 button {
                     class: "maplibregl-ctrl-key",
@@ -106,7 +106,7 @@ pub fn app() -> Element {
                     },
                     "ⓘ"
                 }
-                
+
                 // Simulation button
                 button {
                     class: "maplibregl-ctrl-simulation",
@@ -118,26 +118,26 @@ pub fn app() -> Element {
                     "▶"
                 }
             }
-            
+
             // Layer panel component - conditionally shown
             LayerPanel {
                 visible: *show_layers_panel.read(),
                 layers: layers,
                 on_close: move |_| show_layers_panel.set(false)
             }
-            
+
             // Key panel component - conditionally shown
             KeyPanel {
                 visible: *show_key_panel.read(),
                 on_close: move |_| show_key_panel.set(false)
             }
-            
+
             // Simulation panel - conditionally shown
             if *show_simulation_panel.read() {
                 div {
                     class: "simulation-panel",
                     VehicleSimulation {}
-                    
+
                     button {
                         class: "close-button",
                         onclick: move |_| show_simulation_panel.set(false),

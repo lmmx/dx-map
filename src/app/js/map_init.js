@@ -14,10 +14,10 @@ try {{
             new Layer('station-labels', 'Station Labels', 'station-labels', true)
         ])
     ];
-    
+
     // Create layer switcher instance
     const layerSwitcher = new LayerSwitcher(layers, 'TfL Layers');
-    
+
     // Initialize the map
     const map = new maplibregl.Map({{
         container: '{}',
@@ -29,25 +29,25 @@ try {{
             [0.236, 51.686]  // NE
         ]
     }});
-    
+
     // Add navigation controls
     map.addControl(new maplibregl.NavigationControl());
-    
+
     // Add scale control
     map.addControl(new maplibregl.ScaleControl({{
         maxWidth: 100,
         unit: 'metric'
     }}), 'bottom-left');
-    
+
     // Add key control to the map
     map.addControl(new KeyControl(), 'top-right');
-    
+
     // Add layer switcher control to the map
     map.addControl(layerSwitcher, 'top-right');
-    
+
     // Store map instance for later access
     window.mapInstance = map;
-    
+
     // Add TfL layers when map loads
     map.on('load', function() {{
         // Add placeholder for Central line
@@ -68,7 +68,7 @@ try {{
                 }}
             }}
         }});
-        
+
         map.addLayer({{
             'id': 'central-line-layer',
             'type': 'line',
@@ -82,7 +82,7 @@ try {{
                 'line-width': 4
             }}
         }});
-        
+
         // Add placeholder for Northern line
         map.addSource('northern-line', {{
             'type': 'geojson',
@@ -100,7 +100,7 @@ try {{
                 }}
             }}
         }});
-        
+
         map.addLayer({{
             'id': 'northern-line-layer',
             'type': 'line',
@@ -114,7 +114,7 @@ try {{
                 'line-width': 4
             }}
         }});
-        
+
         // Add placeholder for Overground
         map.addSource('overground-line', {{
             'type': 'geojson',
@@ -132,7 +132,7 @@ try {{
                 }}
             }}
         }});
-        
+
         map.addLayer({{
             'id': 'overground-line-layer',
             'type': 'line',
@@ -146,7 +146,7 @@ try {{
                 'line-width': 4
             }}
         }});
-        
+
         // Add placeholder stations
         map.addSource('stations', {{
             'type': 'geojson',
@@ -180,7 +180,7 @@ try {{
                 ]
             }}
         }});
-        
+
         map.addLayer({{
             'id': 'stations-layer',
             'type': 'circle',
@@ -192,7 +192,7 @@ try {{
                 'circle-stroke-width': 2
             }}
         }});
-        
+
         map.addLayer({{
             'id': 'station-labels',
             'type': 'symbol',

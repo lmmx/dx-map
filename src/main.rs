@@ -1,9 +1,9 @@
 use dioxus::prelude::*;
 
 // For logging and better errors in WASM
-use log::Level;
-use console_log;
 use console_error_panic_hook;
+use console_log;
+use log::Level;
 
 mod app;
 

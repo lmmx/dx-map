@@ -1,18 +1,14 @@
-use dioxus::prelude::*;
 use super::TflLayers;
+use dioxus::prelude::*;
 
 #[component]
-pub fn LayerPanel(
-    visible: bool,
-    layers: Signal<TflLayers>,
-    on_close: EventHandler<()>
-) -> Element {
+pub fn LayerPanel(visible: bool, layers: Signal<TflLayers>, on_close: EventHandler<()>) -> Element {
     rsx! {
         div {
             class: if visible { "layer-switcher-list active" } else { "layer-switcher-list" },
-            
+
             h3 { "Layers" }
-            
+
             h4 { "Background" }
             div {
                 class: "layer-item",
@@ -39,9 +35,9 @@ pub fn LayerPanel(
                     "Labels"
                 }
             }
-            
+
             h4 { "Transport" }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -60,7 +56,7 @@ pub fn LayerPanel(
                     "Underground"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -79,7 +75,7 @@ pub fn LayerPanel(
                     "Overground"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -98,7 +94,7 @@ pub fn LayerPanel(
                     "DLR"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -117,7 +113,7 @@ pub fn LayerPanel(
                     "Elizabeth Line"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -136,7 +132,7 @@ pub fn LayerPanel(
                     "Buses"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -155,7 +151,7 @@ pub fn LayerPanel(
                     "Trams"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -174,9 +170,9 @@ pub fn LayerPanel(
                     "Cable Car"
                 }
             }
-            
+
             h4 { "Infrastructure" }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -195,7 +191,7 @@ pub fn LayerPanel(
                     "Stations"
                 }
             }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -214,9 +210,9 @@ pub fn LayerPanel(
                     "Depots & Facilities"
                 }
             }
-            
+
             h4 { "Simulation" }
-            
+
             div {
                 class: "layer-item",
                 input {
@@ -228,7 +224,7 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.simulation = !updated.simulation;
                         layers.set(updated);
-                        
+
                         // Update visibility of simulation layers via JS
                         let js_code = format!(
                             r#"

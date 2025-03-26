@@ -1,14 +1,11 @@
 use dioxus::prelude::*;
 
 #[component]
-pub fn KeyPanel(
-    visible: bool,
-    on_close: EventHandler<()>
-) -> Element {
+pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
     rsx! {
         div {
             class: if visible { "oim-key-panel visible" } else { "oim-key-panel" },
-            
+
             div {
                 class: "oim-key-header",
                 h2 { "Key" }
@@ -18,15 +15,15 @@ pub fn KeyPanel(
                     "×"
                 }
             }
-            
+
             div {
                 class: "oim-key-body",
-                
+
                 h3 { "Underground Lines" }
                 table {
                     tr {
                         td { "Bakerloo" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line bakerloo"
                             }
@@ -34,7 +31,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Central" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line central"
                             }
@@ -42,7 +39,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Circle" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line circle"
                             }
@@ -50,7 +47,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "District" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line district"
                             }
@@ -58,7 +55,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Hammersmith & City" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line hammersmith"
                             }
@@ -66,7 +63,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Jubilee" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line jubilee"
                             }
@@ -74,7 +71,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Metropolitan" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line metropolitan"
                             }
@@ -82,7 +79,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Northern" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line northern"
                             }
@@ -90,7 +87,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Piccadilly" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line piccadilly"
                             }
@@ -98,7 +95,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Victoria" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line victoria"
                             }
@@ -106,19 +103,19 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Waterloo & City" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line waterloo"
                             }
                         }
                     }
                 }
-                
+
                 h3 { "Other Rail" }
                 table {
                     tr {
                         td { "Overground" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line overground"
                             }
@@ -126,7 +123,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "DLR" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line dlr"
                             }
@@ -134,7 +131,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Elizabeth Line" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line elizabeth"
                             }
@@ -142,7 +139,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Trams" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line tram"
                             }
@@ -150,19 +147,19 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Cable Car" }
-                        td { 
+                        td {
                             div {
                                 class: "color-line cablecar"
                             }
                         }
                     }
                 }
-                
+
                 h3 { "Other Features" }
                 table {
                     tr {
                         td { "Station" }
-                        td { 
+                        td {
                             div {
                                 class: "map-symbol station"
                             }
@@ -170,7 +167,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Interchange" }
-                        td { 
+                        td {
                             div {
                                 class: "map-symbol interchange"
                             }
@@ -178,7 +175,7 @@ pub fn KeyPanel(
                     }
                     tr {
                         td { "Depot" }
-                        td { 
+                        td {
                             div {
                                 class: "map-symbol depot"
                             }
