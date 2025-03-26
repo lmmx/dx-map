@@ -1,7 +1,7 @@
 use crate::maplibre::bindings::*;
 use wasm_bindgen::prelude::*;
 use js_sys::{Array, Object, Reflect};
-use web_sys::{console, window, Document};
+use web_sys::window;
 use std::collections::HashMap;
 
 // Helper to create a MapLibre map configuration

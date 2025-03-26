@@ -1,6 +1,5 @@
 use wasm_bindgen::prelude::*;
 use web_sys::{HtmlElement, Element};
-use js_sys::{Array, Object};
 
 // Define TypeScript-like bindings for MapLibre GL JS
 
@@ -30,7 +29,7 @@ extern "C" {
     ) -> MapLibreMap;
 
     #[wasm_bindgen(method, js_name = getLayer)]
-    pub fn get_layer(this: &MapLibreMap, id: &str) -> Option<JsValue>;
+    pub fn get_layer_raw(this: &MapLibreMap, id: &str) -> JsValue;
 
     #[wasm_bindgen(method, js_name = addSource)]
     pub fn add_source(this: &MapLibreMap, id: &str, source: &JsValue) -> MapLibreMap;
@@ -82,6 +81,17 @@ extern "C" {
 
     #[wasm_bindgen(constructor, js_namespace = window, js_name = LayerGroup)]
     pub fn new(title: &str, layers: &JsValue) -> MapLayerGroup;
+}
+
+impl MapLibreMap {
+    pub fn get_layer(&self, id: &str) -> Option<JsValue> {
+        let raw = self.get_layer_raw(id);
+        if raw.is_null() || raw.is_undefined() {
+            None
+        } else {
+            Some(raw)
+        }
+    }
 }
 
 // Helper to access the global MapLibre instance

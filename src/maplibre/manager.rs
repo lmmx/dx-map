@@ -2,7 +2,6 @@ use crate::maplibre::bindings::*;
 use crate::maplibre::helpers::*;
 use wasm_bindgen::prelude::*;
 use web_sys::{console, window};
-use js_sys::Object;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -32,8 +31,8 @@ impl MapLibreManager {
         load_css("/assets/layerswitcher.css")?;
         
         // Load control script files
-        add_inline_script(include_str!("../../app/js/key_control.js"))?;
-        add_inline_script(include_str!("../../app/js/layer_switcher.js"))?;
+        add_inline_script(include_str!("../app/js/key_control.js"))?;
+        add_inline_script(include_str!("../app/js/layer_switcher.js"))?;
         
         // Create a callback for when the MapLibre script loads
         let container_id = container_id.to_string();

@@ -1,11 +1,12 @@
 use dioxus::prelude::*;
 
 // For logging and better errors in WASM
-use console_error_panic_hook;
-use console_log;
 use log::Level;
+use console_log;
+use console_error_panic_hook;
 
 mod app;
+mod maplibre; // Add the new MapLibre module
 
 /// Entry point for Dioxus
 fn main() {
