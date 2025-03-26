@@ -1,11 +1,13 @@
 use crate::maplibre::bindings::*;
 use wasm_bindgen::prelude::*;
 use js_sys::{Array, Object, Reflect};
-use web_sys::window;
+use web_sys::{window, console};
 use std::collections::HashMap;
 
 // Helper to create a MapLibre map configuration
 pub fn create_map_options(container_id: &str) -> Result<JsValue, JsValue> {
+    console::log_1(&format!("Creating map options for container: {}", container_id).into());
+    
     let options = Object::new();
     
     // Set required properties
@@ -35,11 +37,14 @@ pub fn create_map_options(container_id: &str) -> Result<JsValue, JsValue> {
     
     Reflect::set(&options, &JsValue::from_str("maxBounds"), &bounds)?;
     
+    console::log_1(&"Map options created successfully".into());
     Ok(options.into())
 }
 
 // Create layer configuration
 pub fn create_layer_groups() -> Result<JsValue, JsValue> {
+    console::log_1(&"Creating layer groups".into());
+    
     let layer_groups = Array::new();
     
     // Background group
@@ -73,11 +78,85 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
         layer_groups.push(&infrastructure_group);
     }
     
+    console::log_1(&"Layer groups created successfully".into());
     Ok(layer_groups.into())
 }
 
-// Helper to create a GeoJSON source
+/// Helper to add scripts to the page programmatically
+/// This is likely the most critical function for fixing the closure issue
+pub fn load_script(src: &str, on_load: Option<Closure<dyn FnMut()>>) -> Result<(), JsValue> {
+    console::log_1(&format!("load_script: Loading script from '{}'", src).into());
+    
+    let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
+    let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
+    
+    let script = document.create_element("script")?;
+    script.set_attribute("src", src)?;
+    
+    if let Some(callback) = on_load {
+        console::log_1(&"load_script: Setting up onload callback".into());
+        
+        // METHOD 1: Direct approach - set onload property directly
+        // This is more reliable than the custom attribute approach
+        let callback_js_val = callback.as_ref().clone();
+        Reflect::set(&script, &JsValue::from_str("onload"), &callback_js_val)?;
+        
+        // IMPORTANT: We must forget the closure to prevent it from being dropped
+        console::log_1(&"load_script: Forgetting closure to keep it alive".into());
+        callback.forget();
+    }
+    
+    console::log_1(&"load_script: Appending script to document head".into());
+    document.head()
+        .ok_or_else(|| JsValue::from_str("document should have head"))?
+        .append_child(&script)?;
+    
+    console::log_1(&format!("load_script: Script '{}' added to document", src).into());
+    Ok(())
+}
+
+// Helper to add CSS to the page programmatically
+pub fn load_css(href: &str) -> Result<(), JsValue> {
+    console::log_1(&format!("Loading CSS from '{}'", href).into());
+    
+    let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
+    let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
+    
+    let link = document.create_element("link")?;
+    link.set_attribute("rel", "stylesheet")?;
+    link.set_attribute("href", href)?;
+    
+    document.head()
+        .ok_or_else(|| JsValue::from_str("document should have head"))?
+        .append_child(&link)?;
+    
+    console::log_1(&format!("CSS '{}' loaded successfully", href).into());
+    Ok(())
+}
+
+// Helper to add inline script to the page
+pub fn add_inline_script(content: &str) -> Result<(), JsValue> {
+    console::log_1(&"Adding inline script".into());
+    
+    let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
+    let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
+    
+    let script = document.create_element("script")?;
+    script.set_inner_html(content);
+    
+    document.head()
+        .ok_or_else(|| JsValue::from_str("document should have head"))?
+        .append_child(&script)?;
+    
+    console::log_1(&"Inline script added successfully".into());
+    Ok(())
+}
+
+// Helper functions for creating map elements
+// Adding logging to these but keeping them minimal to focus on the key issues
+
 pub fn create_geojson_line_source(coordinates: &[(f64, f64)]) -> Result<JsValue, JsValue> {
+    console::log_1(&"Creating GeoJSON line source".into());
     let source = Object::new();
     Reflect::set(&source, &JsValue::from_str("type"), &JsValue::from_str("geojson"))?;
     
@@ -103,10 +182,9 @@ pub fn create_geojson_line_source(coordinates: &[(f64, f64)]) -> Result<JsValue,
     Ok(source.into())
 }
 
-// Helper to create a layer definition
 pub fn create_line_layer(id: &str, source: &str, color: &str, width: f64) -> Result<JsValue, JsValue> {
+    console::log_1(&format!("Creating line layer '{}' with source '{}'", id, source).into());
     let layer = Object::new();
-    
     Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str(id))?;
     Reflect::set(&layer, &JsValue::from_str("type"), &JsValue::from_str("line"))?;
     Reflect::set(&layer, &JsValue::from_str("source"), &JsValue::from_str(source))?;
@@ -124,8 +202,9 @@ pub fn create_line_layer(id: &str, source: &str, color: &str, width: f64) -> Res
     Ok(layer.into())
 }
 
-// Helper to create a GeoJSON point collection source
+
 pub fn create_geojson_points_source(points: &[HashMap<String, JsValue>]) -> Result<JsValue, JsValue> {
+    console::log_1(&format!("Creating points source with {} points", points.len()).into());
     let source = Object::new();
     Reflect::set(&source, &JsValue::from_str("type"), &JsValue::from_str("geojson"))?;
     
@@ -163,10 +242,10 @@ pub fn create_geojson_points_source(points: &[HashMap<String, JsValue>]) -> Resu
     Ok(source.into())
 }
 
-// Helper to create circle layer for stations
+/// Helper to create circle layer for stations
 pub fn create_circle_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
+    console::log_1(&format!("Creating circle layer '{}' with source '{}'", id, source).into());
     let layer = Object::new();
-    
     Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str(id))?;
     Reflect::set(&layer, &JsValue::from_str("type"), &JsValue::from_str("circle"))?;
     Reflect::set(&layer, &JsValue::from_str("source"), &JsValue::from_str(source))?;
@@ -181,8 +260,9 @@ pub fn create_circle_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
     Ok(layer.into())
 }
 
-// Helper to create a text label layer
+/// Helper to create a text label layer
 pub fn create_label_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
+    console::log_1(&format!("Creating label layer '{}' with source '{}'", id, source).into());
     let layer = Object::new();
     
     Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str(id))?;
@@ -217,67 +297,11 @@ pub fn create_label_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
     Ok(layer.into())
 }
 
-// Create a ScaleControl configuration
 pub fn create_scale_control_options() -> Result<JsValue, JsValue> {
+    console::log_1(&"Creating scale control options".into());
     let options = Object::new();
     Reflect::set(&options, &JsValue::from_str("maxWidth"), &JsValue::from_f64(100.0))?;
     Reflect::set(&options, &JsValue::from_str("unit"), &JsValue::from_str("metric"))?;
     Ok(options.into())
 }
 
-/// Helper to add scripts to the page programmatically
-pub fn load_script(src: &str, on_load: Option<Closure<dyn FnMut()>>) -> Result<(), JsValue> {
-    let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
-    let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
-    
-    let script = document.create_element("script")?;
-    script.set_attribute("src", src)?;
-    
-    if let Some(callback) = on_load {
-        script.set_attribute("onload", "this.onload_callback()")?;
-        
-        // Store callback in the script element
-        js_sys::Reflect::set(&script, &JsValue::from_str("onload_callback"), callback.as_ref())?;
-        
-        // IMPORTANT: Forget the closure to prevent it from being dropped
-        // The callback will remain alive until the page is unloaded
-        callback.forget();
-    }
-    
-    document.head()
-        .ok_or_else(|| JsValue::from_str("document should have head"))?
-        .append_child(&script)?;
-    
-    Ok(())
-}
-
-// Helper to add CSS to the page programmatically
-pub fn load_css(href: &str) -> Result<(), JsValue> {
-    let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
-    let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
-    
-    let link = document.create_element("link")?;
-    link.set_attribute("rel", "stylesheet")?;
-    link.set_attribute("href", href)?;
-    
-    document.head()
-        .ok_or_else(|| JsValue::from_str("document should have head"))?
-        .append_child(&link)?;
-    
-    Ok(())
-}
-
-// Helper to add inline script to the page
-pub fn add_inline_script(content: &str) -> Result<(), JsValue> {
-    let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
-    let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
-    
-    let script = document.create_element("script")?;
-    script.set_inner_html(content);
-    
-    document.head()
-        .ok_or_else(|| JsValue::from_str("document should have head"))?
-        .append_child(&script)?;
-    
-    Ok(())
-}
