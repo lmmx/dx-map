@@ -8,7 +8,7 @@ use web_sys::{console, window};
 
 // Type to manage the MapLibre map and its state
 pub struct MapLibreManager {
-    map: Option<MapLibreMap>,
+    map: Option<Map>,
 }
 
 impl MapLibreManager {
@@ -23,7 +23,7 @@ impl MapLibreManager {
         let options = create_map_options(container_id)?;
 
         // Create the map
-        let map = MapLibreMap::new(&options);
+        let map = Map::new(&options);
 
         // Store the map in our manager
         self.map = Some(map);
@@ -124,7 +124,7 @@ impl MapLibreManager {
 
 /// Helper function to add MapLibre layers
 fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
-    let map: MapLibreMap = map_instance.clone().into();
+    let map: Map = map_instance.clone().into();
 
     // Central Line
     let central_coords = [

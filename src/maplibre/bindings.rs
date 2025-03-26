@@ -5,45 +5,49 @@ use web_sys::{HtmlElement, Element};
 
 #[wasm_bindgen]
 extern "C" {
+    // Map class
     #[wasm_bindgen(js_namespace = maplibregl, js_name = Map)]
-    pub type MapLibreMap;
+    pub type Map;
 
     #[wasm_bindgen(constructor, js_namespace = maplibregl, js_name = Map)]
-    pub fn new(options: &JsValue) -> MapLibreMap;
+    pub fn new(options: &JsValue) -> Map;
 
     #[wasm_bindgen(method, js_name = getContainer)]
-    pub fn get_container(this: &MapLibreMap) -> HtmlElement;
+    pub fn get_container(this: &Map) -> HtmlElement;
 
     #[wasm_bindgen(method, js_name = getCanvas)]
-    pub fn get_canvas(this: &MapLibreMap) -> Element;
+    pub fn get_canvas(this: &Map) -> Element;
 
     #[wasm_bindgen(method)]
-    pub fn addControl(this: &MapLibreMap, control: &JsValue, position: Option<&str>) -> MapLibreMap;
+    pub fn addControl(this: &Map, control: &JsValue, position: Option<&str>) -> Map;
 
     #[wasm_bindgen(method, js_name = setLayoutProperty)]
     pub fn set_layout_property(
-        this: &MapLibreMap,
+        this: &Map,
         layer_id: &str,
         name: &str,
         value: &JsValue,
-    ) -> MapLibreMap;
+    ) -> Map;
 
     #[wasm_bindgen(method, js_name = getLayer)]
-    pub fn get_layer_raw(this: &MapLibreMap, id: &str) -> JsValue;
+    pub fn get_layer_raw(this: &Map, id: &str) -> JsValue;
 
     #[wasm_bindgen(method, js_name = addSource)]
-    pub fn add_source(this: &MapLibreMap, id: &str, source: &JsValue) -> MapLibreMap;
+    pub fn add_source(this: &Map, id: &str, source: &JsValue) -> Map;
 
     #[wasm_bindgen(method, js_name = addLayer)]
-    pub fn add_layer(this: &MapLibreMap, layer: &JsValue) -> MapLibreMap;
+    pub fn add_layer(this: &Map, layer: &JsValue) -> Map;
 
     #[wasm_bindgen(method)]
-    pub fn on(this: &MapLibreMap, event: &str, handler: &Closure<dyn FnMut()>) -> MapLibreMap;
+    pub fn on(this: &Map, event: &str, handler: &Closure<dyn FnMut()>) -> Map;
 
     #[wasm_bindgen(method)]
-    pub fn off(this: &MapLibreMap, event: &str, handler: &Closure<dyn FnMut()>) -> MapLibreMap;
+    pub fn off(this: &Map, event: &str, handler: &Closure<dyn FnMut()>) -> Map;
 
-    // MapLibre Controls
+    #[wasm_bindgen(method, js_name = isStyleLoaded)]
+    pub fn is_style_loaded(this: &Map) -> bool;
+
+    // MapLibre Controls - these are correctly named
     #[wasm_bindgen(js_namespace = maplibregl, js_name = NavigationControl)]
     pub type NavigationControl;
 
@@ -71,19 +75,19 @@ extern "C" {
 
     // Layer/Group classes
     #[wasm_bindgen(js_namespace = window, js_name = Layer)]
-    pub type MapLayer;
+    pub type Layer;
 
     #[wasm_bindgen(constructor, js_namespace = window, js_name = Layer)]
-    pub fn new(id: &str, title: &str, prefix: &str, enabled: bool) -> MapLayer;
+    pub fn new(id: &str, title: &str, prefix: &str, enabled: bool) -> Layer;
 
     #[wasm_bindgen(js_namespace = window, js_name = LayerGroup)]
-    pub type MapLayerGroup;
+    pub type LayerGroup;
 
     #[wasm_bindgen(constructor, js_namespace = window, js_name = LayerGroup)]
-    pub fn new(title: &str, layers: &JsValue) -> MapLayerGroup;
+    pub fn new(title: &str, layers: &JsValue) -> LayerGroup;
 }
 
-impl MapLibreMap {
+impl Map {
     pub fn get_layer(&self, id: &str) -> Option<JsValue> {
         let raw = self.get_layer_raw(id);
         if raw.is_null() || raw.is_undefined() {
@@ -98,5 +102,5 @@ impl MapLibreMap {
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = window)]
-    pub static mapInstance: Option<MapLibreMap>;
+    pub static mapInstance: Option<Map>;
 }

@@ -1,15 +1,10 @@
 use dioxus::prelude::*;
-
-use super::TflLayers;
-use crate::maplibre::bindings::*;
-use crate::maplibre::helpers::*;
-
-use dioxus::prelude::*;
 use wasm_bindgen::{JsValue, closure::Closure};
 use web_sys::console;
 
+use super::TflLayers;
 use crate::maplibre::helpers::{
-    add_inline_script, // or whatever you need
+    add_inline_script,
     load_css,
     load_script,
 };
@@ -20,27 +15,21 @@ pub fn Canvas(layers: Signal<TflLayers>) -> Element {
     // 1) A Dioxus state handle for your manager
     let mut manager = use_signal(|| MapLibreManager::new());
 
-    // 2) A boolean to ensure we only load once
-    let mut loaded = use_signal(|| false);
-
-    // 3) Run this effect once (when the component first mounts)
+    // 2) Run this effect only once during mount
+    // To avoid the infinite loop, we won't read and write to the same signal
     use_effect(move || {
-        // If we've already loaded everything, skip
-        if loaded() {
-            return ();
-        }
-
-        // Load any CSS or inline scripts
+        // Load any CSS or inline scripts - these run once since they're in a use_effect with no dependencies
         let _ = load_css("https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css");
         let _ = load_css("/assets/layerswitcher.css");
         let _ = add_inline_script(include_str!("../app/js/key_control.js"));
         let _ = add_inline_script(include_str!("../app/js/layer_switcher.js"));
 
         // Prepare the "on_load" closure for when the external script finishes
+        let mut manager_clone = manager.clone(); // Create a clone to avoid capturing the original signal
         let on_load = Closure::wrap(Box::new(move || {
             console::log_1(&"MapLibre script loaded!".into());
 
-            let mg = &mut manager.write();
+            let mg = &mut manager_clone.write();
             if let Err(err) = mg.create_map("maplibre-canvas") {
                 console::error_1(&format!("Failed to create map: {err:?}").into());
             }
@@ -58,14 +47,11 @@ pub fn Canvas(layers: Signal<TflLayers>) -> Element {
             Some(on_load),
         );
 
-        // Mark as loaded so we don’t run twice
-        loaded.set(true);
-
         // Return an empty cleanup closure
         (|| {})()
     });
 
-    // 4) Render the container in your JSX/RSX
+    // 3) Render the container in your JSX/RSX
     rsx! {
         div {
             id: "map-container",

@@ -44,32 +44,32 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
     
     // Background group
     {
-        let labels_layer = MapLayer::new("labels", "Map Labels", "place-", true);
+        let labels_layer = Layer::new("labels", "Map Labels", "place-", true);
         let background_layers = Array::new();
         background_layers.push(&labels_layer);
         
-        let background_group = MapLayerGroup::new("Background", &background_layers);
+        let background_group = LayerGroup::new("Background", &background_layers);
         layer_groups.push(&background_group);
     }
     
     // Transport group
     {
         let transport_layers = Array::new();
-        transport_layers.push(&MapLayer::new("tube-central", "Central Line", "central-line-layer", true));
-        transport_layers.push(&MapLayer::new("tube-northern", "Northern Line", "northern-line-layer", true));
-        transport_layers.push(&MapLayer::new("overground", "Overground", "overground-line-layer", true));
+        transport_layers.push(&Layer::new("tube-central", "Central Line", "central-line-layer", true));
+        transport_layers.push(&Layer::new("tube-northern", "Northern Line", "northern-line-layer", true));
+        transport_layers.push(&Layer::new("overground", "Overground", "overground-line-layer", true));
         
-        let transport_group = MapLayerGroup::new("Transport", &transport_layers);
+        let transport_group = LayerGroup::new("Transport", &transport_layers);
         layer_groups.push(&transport_group);
     }
     
     // Infrastructure group
     {
         let infrastructure_layers = Array::new();
-        infrastructure_layers.push(&MapLayer::new("stations", "Stations", "stations-layer", true));
-        infrastructure_layers.push(&MapLayer::new("station-labels", "Station Labels", "station-labels", true));
+        infrastructure_layers.push(&Layer::new("stations", "Stations", "stations-layer", true));
+        infrastructure_layers.push(&Layer::new("station-labels", "Station Labels", "station-labels", true));
         
-        let infrastructure_group = MapLayerGroup::new("Infrastructure", &infrastructure_layers);
+        let infrastructure_group = LayerGroup::new("Infrastructure", &infrastructure_layers);
         layer_groups.push(&infrastructure_group);
     }
     
@@ -225,7 +225,7 @@ pub fn create_scale_control_options() -> Result<JsValue, JsValue> {
     Ok(options.into())
 }
 
-// Helper to add scripts to the page programmatically
+/// Helper to add scripts to the page programmatically
 pub fn load_script(src: &str, on_load: Option<Closure<dyn FnMut()>>) -> Result<(), JsValue> {
     let window = window().ok_or_else(|| JsValue::from_str("No global window exists"))?;
     let document = window.document().ok_or_else(|| JsValue::from_str("No document exists on window"))?;
@@ -238,6 +238,10 @@ pub fn load_script(src: &str, on_load: Option<Closure<dyn FnMut()>>) -> Result<(
         
         // Store callback in the script element
         js_sys::Reflect::set(&script, &JsValue::from_str("onload_callback"), callback.as_ref())?;
+        
+        // IMPORTANT: Forget the closure to prevent it from being dropped
+        // The callback will remain alive until the page is unloaded
+        callback.forget();
     }
     
     document.head()
