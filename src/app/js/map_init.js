@@ -19,6 +19,9 @@ try {{
         unit: 'metric'
     }}), 'bottom-left');
     
+    // Add key control to the map
+    map.addControl(new KeyControl(), 'top-right');
+    
     // Store map instance for later access
     window.mapInstance = map;
     

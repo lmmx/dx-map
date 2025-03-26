@@ -124,6 +124,13 @@ fn initialize_map_libre(map_id: &str) {
     link.set_attribute("href", "https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css").expect("could not set attribute");
     head.append_child(&link).expect("could not append child");
     
+    // Add KeyControl script
+    let key_control_script = document.create_element("script").expect("could not create script element");
+    key_control_script.set_inner_html(include_str!("./js/key_control.js"));
+    document.head().expect("document should have head")
+        .append_child(&key_control_script)
+        .expect("could not append key control script to head");
+    
     // Add MapLibre script and initialize map
     let script = document.create_element("script").expect("could not create script element");
     script.set_attribute("src", "https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js").expect("could not set attribute");
@@ -131,6 +138,7 @@ fn initialize_map_libre(map_id: &str) {
     // Set up an onload handler
     let map_container_id = map_id.to_string();
     let onload_handler = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
+        // Get the map init code and add our KeyControl
         let init_code = format!(include_str!("./js/map_init.js"), map_container_id);
         
         let _ = js_sys::eval(&init_code);
