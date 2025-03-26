@@ -64,7 +64,7 @@ pub fn app() -> Element {
 
         header {
             img { src: LOGO_SVG }
-            p { "Interactive map with real-time simulation" }
+            p { "Real-time TfL network simulation" }
             
             nav {
                 ul {
