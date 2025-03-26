@@ -124,12 +124,25 @@ fn initialize_map_libre(map_id: &str) {
     link.set_attribute("href", "https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css").expect("could not set attribute");
     head.append_child(&link).expect("could not append child");
     
+    // Add Layer Switcher CSS
+    let layer_switcher_css = document.create_element("link").expect("could not create link element");
+    layer_switcher_css.set_attribute("rel", "stylesheet").expect("could not set attribute");
+    layer_switcher_css.set_attribute("href", "/assets/layerswitcher.css").expect("could not set attribute");
+    head.append_child(&layer_switcher_css).expect("could not append layer switcher CSS");
+    
     // Add KeyControl script
     let key_control_script = document.create_element("script").expect("could not create script element");
     key_control_script.set_inner_html(include_str!("./js/key_control.js"));
     document.head().expect("document should have head")
         .append_child(&key_control_script)
         .expect("could not append key control script to head");
+    
+    // Add LayerSwitcher script
+    let layer_switcher_script = document.create_element("script").expect("could not create script element");
+    layer_switcher_script.set_inner_html(include_str!("./js/layer_switcher.js"));
+    document.head().expect("document should have head")
+        .append_child(&layer_switcher_script)
+        .expect("could not append layer switcher script to head");
     
     // Add MapLibre script and initialize map
     let script = document.create_element("script").expect("could not create script element");
