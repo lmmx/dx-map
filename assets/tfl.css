@@ -315,4 +315,61 @@ nav ul li a:hover {
   height: 10px;
   background-color: #666;
   border: 1px solid #000;
+}/* Simulation Panel */
+.simulation-panel {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 15px;
+  background-color: white;
+  border-radius: 5px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  min-width: 250px;
+}
+
+.simulation-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.simulation-controls button {
+  padding: 8px 12px;
+  background-color: #4a83ec;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.simulation-controls button:hover {
+  background-color: #3a73dc;
+}
+
+.maplibregl-ctrl-simulation {
+  font-size: 16px;
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  text-align: center;
+  background-color: white;
+  border: none;
+  cursor: pointer;
+}
+
+/* Vehicle styles - these will be created by MapLibre, but documented here */
+/* buses-layer - blue circles with white outline */
+/* trains-layer - red circles with white outline */
+
+/* Animation for selected vehicle */
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2); }
+  100% { transform: scale(1); }
+}
+
+.selected-vehicle {
+  animation: pulse 1.5s infinite;
 }

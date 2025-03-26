@@ -214,6 +214,44 @@ pub fn LayerPanel(
                     "Depots & Facilities"
                 }
             }
+            
+            h4 { "Simulation" }
+            
+            div {
+                class: "layer-item",
+                input {
+                    r#type: "checkbox",
+                    id: "simulation",
+                    name: "simulation",
+                    checked: layers.read().simulation,
+                    onchange: move |_| {
+                        let mut updated = *layers.read();
+                        updated.simulation = !updated.simulation;
+                        layers.set(updated);
+                        
+                        // Update visibility of simulation layers via JS
+                        let js_code = format!(
+                            r#"
+                            if (window.mapInstance) {{
+                                const visibility = {} ? 'visible' : 'none';
+                                if (window.mapInstance.getLayer('buses-layer')) {{
+                                    window.mapInstance.setLayoutProperty('buses-layer', 'visibility', visibility);
+                                }}
+                                if (window.mapInstance.getLayer('trains-layer')) {{
+                                    window.mapInstance.setLayoutProperty('trains-layer', 'visibility', visibility);
+                                }}
+                            }}
+                            "#,
+                            updated.simulation
+                        );
+                        let _ = js_sys::eval(&js_code);
+                    }
+                }
+                label {
+                    r#for: "simulation",
+                    "Vehicle Simulation"
+                }
+            }
 
             button {
                 class: "close-button",

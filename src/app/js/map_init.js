@@ -1,4 +1,24 @@
 try {{
+    // Define our layer structure for the layer switcher
+    const layers = [
+        new LayerGroup('Background', [
+            new Layer('labels', 'Map Labels', 'place-', true)
+        ]),
+        new LayerGroup('Transport', [
+            new Layer('tube-central', 'Central Line', 'central-line-layer', true),
+            new Layer('tube-northern', 'Northern Line', 'northern-line-layer', true),
+            new Layer('overground', 'Overground', 'overground-line-layer', true)
+        ]),
+        new LayerGroup('Infrastructure', [
+            new Layer('stations', 'Stations', 'stations-layer', true),
+            new Layer('station-labels', 'Station Labels', 'station-labels', true)
+        ])
+    ];
+    
+    // Create layer switcher instance
+    const layerSwitcher = new LayerSwitcher(layers, 'TfL Layers');
+    
+    // Initialize the map
     const map = new maplibregl.Map({{
         container: '{}',
         style: 'https://tiles.openfreemap.org/styles/bright',
@@ -18,6 +38,12 @@ try {{
         maxWidth: 100,
         unit: 'metric'
     }}), 'bottom-left');
+    
+    // Add key control to the map
+    map.addControl(new KeyControl(), 'top-right');
+    
+    // Add layer switcher control to the map
+    map.addControl(layerSwitcher, 'top-right');
     
     // Store map instance for later access
     window.mapInstance = map;
