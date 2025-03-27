@@ -4,7 +4,6 @@ A simple integration of MapLibre GL JS with Dioxus - a reactive UI framework for
 
 ![MapLibre GL JS with Dioxus](https://github.com/user-attachments/assets/75549769-a5fe-464e-9905-bb150b4a8881)
 
-
 ## Overview
 
 This project demonstrates how to integrate MapLibre GL JS with Dioxus to create an interactive map application compiled to WebAssembly. It serves as a starting point for developers looking to build map-based applications using Rust for the web.
@@ -16,6 +15,23 @@ This project demonstrates how to integrate MapLibre GL JS with Dioxus to create 
 - 🔄 Reactive UI components with Dioxus
 
 ## Getting Started
+
+### Development
+
+```bash
+dx serve --platform web
+```
+
+Then open `http://0.0.0.0:8080/`
+
+### Deployment
+
+```bash
+dx build --platform web --release
+```
+
+Then copy everything under `target/dx/my-map/release/web/public` to your static site host.
+(Everything is client side, for a backend you'd use `bundle`)
 
 ### Prerequisites
 
