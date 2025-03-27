@@ -33,6 +33,8 @@ dx build --platform web --release
 Then copy everything under `target/dx/my-map/release/web/public` to your static site host.
 (Everything is client side, for a backend you'd use `bundle`)
 
+Note that things like the subpath of the domain you deploy from are set in Dioxus.toml
+
 ### Prerequisites
 
 You'll need the following installed:
