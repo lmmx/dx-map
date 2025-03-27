@@ -88,6 +88,12 @@ impl MapLibreManager {
             map.addControl(&JsValue::from(layer_switcher), Some("top-right"));
             console::log_1(&"LayerSwitcher added".into());
 
+            // Add simulation control
+            console::log_1(&"Adding SimulationControl".into());
+            let simulation_control = SimulationControl::new();
+            map.addControl(&JsValue::from(simulation_control), Some("top-right"));
+            console::log_1(&"SimulationControl added".into());
+
             console::log_1(&"All controls added successfully".into());
         } else {
             console::error_1(&"Cannot add controls: Map not initialized".into());
@@ -260,11 +266,7 @@ fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
     // Central Line
     console::log_1(&"Adding Central Line".into());
     let central_coords = [
-        (-0.22, 51.51),
-        (-0.18, 51.52),
-        (-0.14, 51.515),
-        (-0.10, 51.52),
-        (-0.05, 51.52),
+        (-0.22, 51.51), (-0.18, 51.52), (-0.14, 51.515), (-0.10, 51.52), (-0.05, 51.52),
     ];
     let central_source = create_geojson_line_source(&central_coords)?;
     map.add_source("central-line", &central_source);
@@ -277,10 +279,7 @@ fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
     // Northern Line
     console::log_1(&"Adding Northern Line".into());
     let northern_coords = [
-        (-0.15, 51.48),
-        (-0.12, 51.50),
-        (-0.12, 51.53),
-        (-0.14, 51.55),
+        (-0.15, 51.48), (-0.12, 51.50), (-0.12, 51.53), (-0.14, 51.55),
     ];
     let northern_source = create_geojson_line_source(&northern_coords)?;
     map.add_source("northern-line", &northern_source);
@@ -293,10 +292,7 @@ fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
     // Overground
     console::log_1(&"Adding Overground".into());
     let overground_coords = [
-        (-0.20, 51.53),
-        (-0.16, 51.54),
-        (-0.10, 51.54),
-        (-0.05, 51.55),
+        (-0.20, 51.53), (-0.16, 51.54), (-0.10, 51.54), (-0.05, 51.55),
     ];
     let overground_source = create_geojson_line_source(&overground_coords)?;
     map.add_source("overground-line", &overground_source);
@@ -342,6 +338,29 @@ fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
     console::log_1(&"Station labels layer added".into());
 
     console::log_1(&"All map layers added successfully".into());
+
+    // Initialize the vehicle simulation after all other layers are added
+    console::log_1(&"Initializing vehicle simulation from map_layers".into());
+    let init_simulation_js = r#"
+        if (typeof window.initializeSimulation === 'function') {
+            console.log('Calling window.initializeSimulation()');
+            window.initializeSimulation();
+        } else {
+            console.log('Creating initializeSimulation placeholder');
+            // Create a placeholder function that will be replaced when the simulation module loads
+            window.initializeSimulation = function() {
+                console.log('Placeholder initializeSimulation called - will retry in 1 second');
+                setTimeout(() => {
+                    if (typeof window.realInitializeSimulation === 'function') {
+                        window.realInitializeSimulation();
+                    }
+                }, 1000);
+            };
+        }
+    "#;
+    let _ = js_sys::eval(init_simulation_js);
+    console::log_1(&"Vehicle simulation initialization requested".into());
+
     Ok(())
 }
 

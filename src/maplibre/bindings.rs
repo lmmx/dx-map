@@ -80,6 +80,12 @@ extern "C" {
 
     #[wasm_bindgen(constructor, js_namespace = window, js_name = LayerGroup)]
     pub fn new(title: &str, layers: &JsValue) -> LayerGroup;
+
+    #[wasm_bindgen(js_namespace = window, js_name = SimulationControl)]
+    pub type SimulationControl;
+    
+    #[wasm_bindgen(constructor, js_namespace = window, js_name = SimulationControl)]
+    pub fn new() -> SimulationControl;
 }
 
 impl Map {

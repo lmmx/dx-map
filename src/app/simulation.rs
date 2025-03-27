@@ -2,7 +2,7 @@ use dioxus::prelude::*;
 use js_sys::{Array, Math, Object, Reflect};
 use std::cell::RefCell;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
-use web_sys::console;
+use web_sys::{console, window};
 
 // Model components
 // ---------------
@@ -52,35 +52,58 @@ pub struct Route {
 // MapLibre integration components
 // ------------------------------
 
-/// Component that initializes and manages the vehicle simulation
-#[component]
-pub fn VehicleSimulation() -> Element {
-    let mut initialized = use_signal(|| false);
+/// Expose initialization function globally
+// Expose Rust functions to JavaScript
+pub fn expose_simulation_functions() -> Result<(), JsValue> {
+    console::log_1(&"Exposing simulation functions to JavaScript".into());
 
-    // Set up a use_effect to initialize the simulation once
-    use_effect(move || {
-        if !*initialized.read() {
-            initialize_simulation();
-            initialized.set(true);
-        }
-    });
+    // Create initialize function
+    let init_closure = Closure::wrap(Box::new(|| {
+        console::log_1(&"rust_initialize_simulation called from JS".into());
+        initialize_simulation();
+    }) as Box<dyn FnMut()>);
 
-    rsx! {
-        // UI Controls for simulation
-        div {
-            class: "simulation-controls",
-            button {
-                id: "toggle-simulation",
-                onclick: move |_| toggle_simulation(),
-                "Pause/Resume Simulation"
-            }
-            button {
-                id: "reset-simulation",
-                onclick: move |_| reset_simulation(),
-                "Reset Simulation"
-            }
-        }
+    // Create toggle function
+    let toggle_closure = Closure::wrap(Box::new(|| {
+        console::log_1(&"rust_toggle_simulation called from JS".into());
+        toggle_simulation();
+    }) as Box<dyn FnMut()>);
+
+    // Create reset function
+    let reset_closure = Closure::wrap(Box::new(|| {
+        console::log_1(&"rust_reset_simulation called from JS".into());
+        reset_simulation();
+    }) as Box<dyn FnMut()>);
+
+    // Set them on the window object
+    if let Some(window) = window() {
+        js_sys::Reflect::set(
+            &window,
+            &JsValue::from_str("rust_initialize_simulation"),
+            init_closure.as_ref(),
+        ).expect("Could not set rust_initialize_simulation");
+
+        js_sys::Reflect::set(
+            &window,
+            &JsValue::from_str("rust_toggle_simulation"),
+            toggle_closure.as_ref(),
+        ).expect("Could not set rust_toggle_simulation");
+
+        js_sys::Reflect::set(
+            &window,
+            &JsValue::from_str("rust_reset_simulation"),
+            reset_closure.as_ref(),
+        ).expect("Could not set rust_reset_simulation");
+
+        console::log_1(&"Simulation functions exposed to JavaScript".into());
     }
+
+    // Leak the closures (they will live for the lifetime of the page)
+    init_closure.forget();
+    toggle_closure.forget();
+    reset_closure.forget();
+
+    Ok(())
 }
 
 // SIMULATION FUNCTIONS
@@ -89,6 +112,13 @@ pub fn VehicleSimulation() -> Element {
 /// Initialize the vehicle simulation
 fn initialize_simulation() {
     console::log_1(&"Initializing vehicle simulation...".into());
+
+    // Set a global flag to track simulation visibility
+    let js_code = r#"
+    window.simulationVisible = true;
+    console.log('Set window.simulationVisible = true');
+    "#;
+    let _ = js_sys::eval(js_code);
 
     // Build routes
     let routes = build_sample_routes();
@@ -281,10 +311,10 @@ fn register_vehicle_layers() {
                 source: 'vehicles-source',
                 filter: ['==', ['get', 'vehicleType'], 'Bus'],
                 paint: {
-                    'circle-radius': 5,
+                    'circle-radius': 6,
                     'circle-color': '#0000FF',
                     'circle-stroke-color': '#FFFFFF',
-                    'circle-stroke-width': 1
+                    'circle-stroke-width': 2
                 }
             });
 
@@ -295,14 +325,19 @@ fn register_vehicle_layers() {
                 source: 'vehicles-source',
                 filter: ['==', ['get', 'vehicleType'], 'Train'],
                 paint: {
-                    'circle-radius': 5,
+                    'circle-radius': 6,
                     'circle-color': '#FF0000',
                     'circle-stroke-color': '#FFFFFF',
-                    'circle-stroke-width': 1
+                    'circle-stroke-width': 2
                 }
             });
 
-            console.log('Vehicle layers registered with MapLibre');
+            // Make sure the simulation layers are visible by default
+            const initialVisibility = window.simulationVisible === false ? 'none' : 'visible';
+            window.mapInstance.setLayoutProperty('buses-layer', 'visibility', initialVisibility);
+            window.mapInstance.setLayoutProperty('trains-layer', 'visibility', initialVisibility);
+
+            console.log('Vehicle layers registered with MapLibre, visibility:', initialVisibility);
         }
     } else {
         console.error('MapInstance not found!');
@@ -434,91 +469,56 @@ fn update_vehicle_positions(sim_state: &mut SimulationState) {
 
 /// Update MapLibre with the current vehicle positions
 fn update_maplibre_vehicles(sim_state: &SimulationState) {
-    // Create GeoJSON for the vehicles
-    let features_array = Array::new();
+    // Instead of trying to build a complex JS object, let's construct a simple JSON string directly
+    let mut features = Vec::new();
 
     for vehicle in &sim_state.vehicles {
-        // Create a feature for this vehicle
-        let feature = Object::new();
-
-        // Set feature type
-        Reflect::set(
-            &feature,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("Feature"),
-        )
-        .unwrap();
-
-        // Set geometry
-        let geometry = Object::new();
-        Reflect::set(
-            &geometry,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("Point"),
-        )
-        .unwrap();
-
-        let coordinates = Array::new();
-        coordinates.push(&JsValue::from_f64(vehicle.lng));
-        coordinates.push(&JsValue::from_f64(vehicle.lat));
-
-        Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coordinates).unwrap();
-
-        Reflect::set(&feature, &JsValue::from_str("geometry"), &geometry).unwrap();
-
-        // Set properties
-        let properties = Object::new();
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("id"),
-            &JsValue::from_f64(vehicle.id as f64),
-        )
-        .unwrap();
-
-        let vehicle_type_str = match vehicle.vehicle_type {
+        // Format each vehicle as a GeoJSON feature
+        let vehicle_type = match vehicle.vehicle_type {
             VehicleType::Bus => "Bus",
             VehicleType::Train => "Train",
         };
 
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("vehicleType"),
-            &JsValue::from_str(vehicle_type_str),
-        )
-        .unwrap();
+        let feature = format!(
+            r#"{{
+                "type": "Feature",
+                "geometry": {{
+                    "type": "Point",
+                    "coordinates": [{}, {}]
+                }},
+                "properties": {{
+                    "id": {},
+                    "vehicleType": "{}"
+                }}
+            }}"#,
+            vehicle.lng, vehicle.lat, vehicle.id, vehicle_type
+        );
 
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("routeIndex"),
-            &JsValue::from_f64(vehicle.route_index as f64),
-        )
-        .unwrap();
-
-        Reflect::set(&feature, &JsValue::from_str("properties"), &properties).unwrap();
-
-        // Add to features array
-        features_array.push(&feature);
+        features.push(feature);
     }
 
-    // Create the GeoJSON object
-    let geojson = Object::new();
-    Reflect::set(
-        &geojson,
-        &JsValue::from_str("type"),
-        &JsValue::from_str("FeatureCollection"),
-    )
-    .unwrap();
-
-    Reflect::set(&geojson, &JsValue::from_str("features"), &features_array).unwrap();
+    // Join all features into a GeoJSON collection
+    let geojson = format!(
+        r#"{{
+            "type": "FeatureCollection",
+            "features": [{}]
+        }}"#,
+        features.join(",")
+    );
 
     // Update the source in MapLibre
     let js_code = format!(
         r#"
-    if (window.mapInstance && window.mapInstance.getSource('vehicles-source')) {{
-        window.mapInstance.getSource('vehicles-source').setData({});
-    }}
-    "#,
-        serialize_geojson_data(&geojson)
+        if (window.mapInstance && window.mapInstance.getSource('vehicles-source')) {{
+            try {{
+                const data = {};
+                window.mapInstance.getSource('vehicles-source').setData(data);
+            }} catch (e) {{
+                console.error("Error updating vehicles source:", e);
+            }}
+        }}
+        "#,
+        geojson
     );
 
     let _ = js_sys::eval(&js_code);
@@ -528,16 +528,32 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
 fn serialize_geojson_data(geojson: &Object) -> String {
     let js_code = r#"
     function serializeToJSON(obj) {
-        return JSON.stringify(obj);
+        try {
+            return JSON.stringify(obj);
+        } catch (e) {
+            console.error("Failed to stringify object:", e);
+            return "{}";
+        }
     }
     serializeToJSON(arguments[0]);
     "#;
 
-    let serialized = js_sys::Function::new_with_args("obj", js_code)
-        .call1(&JsValue::NULL, &geojson.into())
-        .unwrap();
-
-    serialized.as_string().unwrap()
+    // Try to call the function safely
+    match js_sys::Function::new_with_args("obj", js_code)
+        .call1(&JsValue::NULL, &geojson.into()) {
+        Ok(result) => {
+            // Try to convert to string, fallback to empty JSON if it fails
+            result.as_string().unwrap_or_else(|| {
+                console::error_1(&"Failed to get string from serialized result".into());
+                "{}".to_string()
+            })
+        },
+        Err(err) => {
+            // Log the error and return empty JSON
+            console::error_1(&format!("Failed to serialize GeoJSON: {:?}", err).into());
+            "{}".to_string()
+        }
+    }
 }
 
 /// Toggle the simulation pause state
@@ -575,4 +591,54 @@ fn reset_simulation() {
     initialize_simulation();
 
     console::log_1(&"Simulation reset complete".into());
+}
+
+/// Debug function to log important simulation state
+fn debug_simulation_state(sim_state: &SimulationState) {
+    // Only log periodically to avoid console spam
+    static mut COUNTER: u32 = 0;
+    unsafe {
+        COUNTER += 1;
+        if COUNTER % 60 != 0 { // Log every ~60 frames (roughly 1 second)
+            return;
+        }
+    }
+
+    // Log general state
+    console::log_1(&format!("Simulation state: {} vehicles, paused: {}", 
+        sim_state.vehicles.len(), sim_state.is_paused).into());
+    
+    // Log a sample vehicle
+    if !sim_state.vehicles.is_empty() {
+        let sample = &sim_state.vehicles[0];
+        console::log_1(&format!("Sample vehicle: id={}, type={:?}, pos=({:.4}, {:.4})", 
+            sample.id, 
+            sample.vehicle_type, 
+            sample.lng, 
+            sample.lat).into());
+    }
+    
+    // Check if vehicles source exists and log its state
+    let js_code = r#"
+    let result = "unknown";
+    if (window.mapInstance) {
+        const source = window.mapInstance.getSource('vehicles-source');
+        if (source) {
+            try {
+                const data = source._data;
+                const features = data.features || [];
+                result = `Source exists, ${features.length} features`;
+            } catch (e) {
+                result = `Source exists but error: ${e.message}`;
+            }
+        } else {
+            result = "Source does not exist";
+        }
+    } else {
+        result = "Map instance not found";
+    }
+    console.log("Vehicles source check:", result);
+    "#;
+    
+    let _ = js_sys::eval(js_code);
 }

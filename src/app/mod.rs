@@ -8,7 +8,7 @@ mod simulation; // New module for vehicle simulation
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
-use simulation::VehicleSimulation; // Import the simulation component
+use crate::maplibre::helpers;
 
 // If you have images or CSS as assets, define them with Dioxus' asset! macro
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -56,6 +56,98 @@ pub fn app() -> Element {
     let mut show_simulation_panel = use_signal(|| false); // New signal for simulation controls
     let layers = use_signal(|| TflLayers::default());
 
+    // Initialize simulation JS when app loads
+    use_effect(move || {
+	let controller_script = r#"
+	// Global simulation controller
+	const SimulationController = {
+	  initialized: false,
+	  running: false,
+	  
+	  initialize: function() {
+	    console.log("SimulationController.initialize() called");
+	    if (this.initialized) {
+	      console.log("Simulation already initialized, skipping");
+	      return;
+	    }
+	    
+	    // Call the Rust initialization function
+	    if (typeof window.rust_initialize_simulation === 'function') {
+	      console.log("Calling rust_initialize_simulation()");
+	      window.rust_initialize_simulation();
+	      this.initialized = true;
+	      this.running = true;
+	    } else {
+	      console.error("rust_initialize_simulation function not found");
+	    }
+	  },
+	  
+	  toggle: function() {
+	    console.log("SimulationController.toggle() called");
+	    if (!this.initialized) {
+	      this.initialize();
+	      return;
+	    }
+	    
+	    if (typeof window.rust_toggle_simulation === 'function') {
+	      window.rust_toggle_simulation();
+	      this.running = !this.running;
+	      console.log("Simulation running:", this.running);
+	    }
+	  },
+	  
+	  reset: function() {
+	    console.log("SimulationController.reset() called");
+	    if (typeof window.rust_reset_simulation === 'function') {
+	      window.rust_reset_simulation();
+	      this.running = true;
+	      console.log("Simulation reset and running");
+	    }
+	  }
+	};
+
+	// Make it globally available
+	window.SimulationController = SimulationController;
+
+	// Initialize when map is ready
+	if (window.mapInstance && window.mapInstance.isStyleLoaded()) {
+	  setTimeout(function() {
+	    SimulationController.initialize();
+	  }, 1000);
+	} else {
+	  const initInterval = setInterval(function() {
+	    if (window.mapInstance && window.mapInstance.isStyleLoaded()) {
+	      clearInterval(initInterval);
+	      setTimeout(function() {
+		SimulationController.initialize();
+	      }, 1000);
+	    }
+	  }, 1000);
+	}
+	"#;
+	if let Err(e) = helpers::add_inline_script(controller_script) {
+	    web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
+	} else {
+	    web_sys::console::log_1(&"Simulation controller script added".into());
+	}
+    });
+
+    use_effect(move || {
+	// Try to expose simulation functions if available
+	if let Ok(_) = simulation::expose_simulation_functions() {
+	    web_sys::console::log_1(&"Simulation functions exposed on app start".into());
+	}
+	
+	// Add the controller script
+	let controller_script = r#"
+	// SimulationController code here...
+	"#;
+	
+	if let Err(e) = helpers::add_inline_script(controller_script) {
+	    web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
+	}
+    });
+
     rsx! {
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
@@ -81,44 +173,6 @@ pub fn app() -> Element {
             // Main map container
             Canvas { layers: layers }
 
-            // Controls for showing/hiding panels
-            div {
-                class: "maplibregl-ctrl maplibregl-ctrl-group layer-controls",
-
-                // Layers button
-                button {
-                    class: "maplibregl-ctrl-layers",
-                    title: "Show/hide layers",
-                    onclick: move |_| {
-                        let current = *show_layers_panel.read();
-                        show_layers_panel.set(!current);
-                    },
-                    "☰"
-                }
-
-                // Key button
-                button {
-                    class: "maplibregl-ctrl-key",
-                    title: "Show map key",
-                    onclick: move |_| {
-                        let current = *show_key_panel.read();
-                        show_key_panel.set(!current);
-                    },
-                    "ⓘ"
-                }
-
-                // Simulation button
-                button {
-                    class: "maplibregl-ctrl-simulation",
-                    title: "Simulation controls",
-                    onclick: move |_| {
-                        let current = *show_simulation_panel.read();
-                        show_simulation_panel.set(!current);
-                    },
-                    "▶"
-                }
-            }
-
             // Layer panel component - conditionally shown
             LayerPanel {
                 visible: *show_layers_panel.read(),
@@ -130,20 +184,6 @@ pub fn app() -> Element {
             KeyPanel {
                 visible: *show_key_panel.read(),
                 on_close: move |_| show_key_panel.set(false)
-            }
-
-            // Simulation panel - conditionally shown
-            if *show_simulation_panel.read() {
-                div {
-                    class: "simulation-panel",
-                    VehicleSimulation {}
-
-                    button {
-                        class: "close-button",
-                        onclick: move |_| show_simulation_panel.set(false),
-                        "Close"
-                    }
-                }
             }
         }
     }
