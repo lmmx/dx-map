@@ -40,6 +40,7 @@ pub fn Canvas(layers: Signal<TflLayers>) -> Element {
         console::log_1(&"Loading JS controls...".into());
         let _ = add_inline_script(include_str!("../app/js/key_control.js"));
         let _ = add_inline_script(include_str!("../app/js/layer_switcher.js"));
+        let _ = add_inline_script(include_str!("../app/js/simulation_control.js"));
 
         // Prepare the "on_load" closure for when the external script finishes
         let mut manager_clone = manager.clone(); // Create a clone to avoid capturing the original signal
