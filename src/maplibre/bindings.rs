@@ -1,5 +1,5 @@
 use wasm_bindgen::prelude::*;
-use web_sys::{HtmlElement, Element};
+use web_sys::{Element, HtmlElement};
 
 // Define TypeScript-like bindings for MapLibre GL JS
 
@@ -22,12 +22,7 @@ extern "C" {
     pub fn addControl(this: &Map, control: &JsValue, position: Option<&str>) -> Map;
 
     #[wasm_bindgen(method, js_name = setLayoutProperty)]
-    pub fn set_layout_property(
-        this: &Map,
-        layer_id: &str,
-        name: &str,
-        value: &JsValue,
-    ) -> Map;
+    pub fn set_layout_property(this: &Map, layer_id: &str, name: &str, value: &JsValue) -> Map;
 
     #[wasm_bindgen(method, js_name = getLayer)]
     pub fn get_layer_raw(this: &Map, id: &str) -> JsValue;

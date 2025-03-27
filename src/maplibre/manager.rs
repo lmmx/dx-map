@@ -17,7 +17,7 @@ impl MapLibreManager {
     // Create a new manager (without initializing the map yet)
     pub fn new() -> Self {
         console::log_1(&"MapLibreManager::new() called".into());
-        Self { 
+        Self {
             map: None,
             _event_listeners: Vec::new(),
         }
@@ -26,10 +26,10 @@ impl MapLibreManager {
     /// Create the actual map instance
     pub fn create_map(&mut self, container_id: &str) -> Result<(), JsValue> {
         console::log_1(&format!("MapLibreManager::create_map('{}') called", container_id).into());
-        
+
         // First check if maplibregl is loaded
         Self::debug_check_maplibregl()?;
-        
+
         // Create map configuration
         let options = create_map_options(container_id)?;
         console::log_1(&"Map options created successfully".into());
@@ -60,7 +60,7 @@ impl MapLibreManager {
     /// Add map controls (the buttons)
     pub fn add_map_controls(&mut self) -> Result<(), JsValue> {
         console::log_1(&"MapLibreManager::add_map_controls() called".into());
-        
+
         if let Some(map) = &self.map {
             // Add navigation control
             console::log_1(&"Adding NavigationControl".into());
@@ -87,7 +87,7 @@ impl MapLibreManager {
             let layer_switcher = LayerSwitcher::new(&layers, "TfL Layers");
             map.addControl(&JsValue::from(layer_switcher), Some("top-right"));
             console::log_1(&"LayerSwitcher added".into());
-            
+
             console::log_1(&"All controls added successfully".into());
         } else {
             console::error_1(&"Cannot add controls: Map not initialized".into());
@@ -101,7 +101,7 @@ impl MapLibreManager {
     /// This is likely where the issue is happening with the 'load' event
     pub fn setup_map_data(&mut self) -> Result<(), JsValue> {
         console::log_1(&"MapLibreManager::setup_map_data() called".into());
-        
+
         if let Some(map) = &self.map {
             // Create a static listener ID to help with debugging
             static mut LISTENER_ID: usize = 0;
@@ -109,13 +109,15 @@ impl MapLibreManager {
                 LISTENER_ID += 1;
                 LISTENER_ID
             };
-            
+
             console::log_1(&format!("Creating 'load' event listener #{}", listener_id).into());
-            
+
             // Set up an onload handler for the map - THIS IS LIKELY WHERE THE RECURSION HAPPENS
             let load_handler = Closure::wrap(Box::new(move || {
-                console::log_1(&format!("Map 'load' event fired (listener #{})", listener_id).into());
-                
+                console::log_1(
+                    &format!("Map 'load' event fired (listener #{})", listener_id).into(),
+                );
+
                 // This runs when the map style is fully loaded
                 let window = match window() {
                     Some(w) => w,
@@ -124,21 +126,22 @@ impl MapLibreManager {
                         return;
                     }
                 };
-                
+
                 console::log_1(&"Getting mapInstance from window".into());
-                let map_instance = match js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
-                    Ok(m) => {
-                        if m.is_undefined() {
-                            console::error_1(&"mapInstance is undefined".into());
+                let map_instance =
+                    match js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
+                        Ok(m) => {
+                            if m.is_undefined() {
+                                console::error_1(&"mapInstance is undefined".into());
+                                return;
+                            }
+                            m
+                        }
+                        Err(e) => {
+                            console::error_1(&format!("Failed to get mapInstance: {:?}", e).into());
                             return;
                         }
-                        m
-                    },
-                    Err(e) => {
-                        console::error_1(&format!("Failed to get mapInstance: {:?}", e).into());
-                        return;
-                    }
-                };
+                    };
 
                 console::log_1(&"Adding map layers".into());
                 // Add our sources and layers
@@ -154,7 +157,7 @@ impl MapLibreManager {
             // Add the load event handler
             console::log_1(&"Registering 'load' event handler".into());
             map.on("load", &load_handler);
-            
+
             // IMPORTANT: Store the handler to prevent it from being dropped
             self._event_listeners.push(load_handler);
             console::log_1(&"'load' event handler registered and stored".into());
@@ -169,13 +172,20 @@ impl MapLibreManager {
     /// Update layer visibility based on TflLayers struct
     pub fn update_layer_visibility(&self, layers: &crate::app::TflLayers) -> Result<(), JsValue> {
         console::log_1(&"MapLibreManager::update_layer_visibility() called".into());
-        
+
         if let Some(map) = &self.map {
             // Helper function to set visibility
             let set_visibility = |layer_id: &str, visible: bool| -> Result<(), JsValue> {
                 console::log_1(&format!("Checking if layer '{}' exists", layer_id).into());
                 if map.get_layer(layer_id).is_some() {
-                    console::log_1(&format!("Setting '{}' visibility to {}", layer_id, if visible { "visible" } else { "none" }).into());
+                    console::log_1(
+                        &format!(
+                            "Setting '{}' visibility to {}",
+                            layer_id,
+                            if visible { "visible" } else { "none" }
+                        )
+                        .into(),
+                    );
                     let visibility = if visible { "visible" } else { "none" };
                     map.set_layout_property(layer_id, "visibility", &JsValue::from_str(visibility));
                 } else {
@@ -201,41 +211,41 @@ impl MapLibreManager {
 
         Ok(())
     }
-    
+
     // Static debug function to check if maplibregl is available
     pub fn debug_check_maplibregl() -> Result<(), JsValue> {
         console::log_1(&"Checking if maplibregl is loaded".into());
-        
+
         let window = window().ok_or_else(|| JsValue::from_str("No window found"))?;
-        
+
         // Check if maplibregl exists
         let maplibregl = js_sys::Reflect::get(&window, &JsValue::from_str("maplibregl"))?;
-        
+
         if maplibregl.is_undefined() {
             console::error_1(&"maplibregl is undefined!".into());
             return Err(JsValue::from_str("maplibregl is undefined"));
         }
-        
+
         console::log_1(&"Found maplibregl object".into());
-        
+
         // Check if Map constructor exists
         let map_constructor = js_sys::Reflect::get(&maplibregl, &JsValue::from_str("Map"))?;
-        
+
         if map_constructor.is_undefined() {
             console::error_1(&"maplibregl.Map is undefined!".into());
             return Err(JsValue::from_str("maplibregl.Map is undefined"));
         }
-        
+
         console::log_1(&"Found maplibregl.Map constructor".into());
-        
+
         // Check if it's actually a constructor/function
         if !JsValue::is_function(&map_constructor) {
             console::error_1(&"maplibregl.Map is not a function!".into());
             return Err(JsValue::from_str("maplibregl.Map is not a function"));
         }
-        
+
         console::log_1(&"maplibregl.Map is a function (constructor)".into());
-        
+
         Ok(())
     }
 }
@@ -243,7 +253,7 @@ impl MapLibreManager {
 /// Helper function to add MapLibre layers
 fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
     console::log_1(&"add_map_layers() called".into());
-    
+
     let map: Map = map_instance.clone().into();
     console::log_1(&"Map instance cloned".into());
 
@@ -339,13 +349,13 @@ fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
 impl Drop for MapLibreManager {
     fn drop(&mut self) {
         console::log_1(&"MapLibreManager being dropped".into());
-        
+
         // Clear any global references
         if let Some(window) = window() {
             let _ =
                 js_sys::Reflect::set(&window, &JsValue::from_str("mapInstance"), &JsValue::null());
         }
-        
+
         console::log_1(&"Global references cleared".into());
     }
 }
