@@ -1,208 +1,103 @@
-use super::TflLayers;
 use dioxus::prelude::*;
-use log::info;
+use wasm_bindgen::{JsValue, closure::Closure};
+use web_sys::console;
+
+use super::TflLayers;
+use crate::maplibre::helpers::{add_inline_script, load_css, load_script};
+use crate::maplibre::manager::MapLibreManager;
 
 #[component]
 pub fn Canvas(layers: Signal<TflLayers>) -> Element {
-    let map_id = "maplibre-canvas";
-    let mut prev_layers = use_signal(|| None::<TflLayers>);
+    // Add a flag to track if we've already initialized the map
+    let mut already_initialized = use_signal(|| false);
 
-    // Create a use_effect to initialize the map after the component mounts
-    use_effect(move || {
-        info!("Canvas mounted, initializing TfL map");
-
-        // Initialize the map with London coordinates
-        initialize_map_libre(&map_id);
-
-        // Check if layers changed
-        let current = *layers.read();
-        let mut prev = prev_layers.write();
-
-        // If we have previous layers saved and they're different
-        if let Some(old_layers) = *prev {
-            if old_layers != current {
-                info!("Layers state changed");
-                update_layer_visibility(&current);
-            }
-        } else {
-            // First time - initialize
-            update_layer_visibility(&current);
-        }
-
-        // Save current layers for next comparison
-        *prev = Some(current);
+    // 1) A Dioxus state handle for your manager
+    let manager = use_signal(|| {
+        console::log_1(&"Creating new MapLibreManager".into());
+        MapLibreManager::new()
     });
 
+    // 2) Run this effect only once during mount
+    // To avoid the infinite loop, we won't read and write to the same signal
+    use_effect(move || {
+        console::log_1(&"Canvas effect starting".into());
+
+        // Check if we've already initialized - avoid double initialization
+        if *already_initialized.write() {
+            console::log_1(&"Map already initialized, skipping".into());
+            return (|| {})();
+        }
+
+        // Mark as initialized immediately to prevent potential recursion
+        already_initialized.set(true);
+
+        // Load any CSS or inline scripts - these run once since they're in a use_effect with no dependencies
+        console::log_1(&"Loading CSS files...".into());
+        let _ = load_css("https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css");
+        let _ = load_css("/assets/layerswitcher.css");
+        let _ = load_css("/assets/key.css"); // Make sure we load the key.css
+
+        console::log_1(&"Loading JS controls...".into());
+        let _ = add_inline_script(include_str!("../app/js/key_control.js"));
+        let _ = add_inline_script(include_str!("../app/js/layer_switcher.js"));
+
+        // Prepare the "on_load" closure for when the external script finishes
+        let mut manager_clone = manager.clone(); // Create a clone to avoid capturing the original signal
+
+        console::log_1(&"Creating script onload closure...".into());
+        let on_load = Closure::wrap(Box::new(move || {
+            console::log_1(&"MapLibre script loaded callback executing".into());
+
+            let mg = &mut manager_clone.write();
+            console::log_1(&"Creating map...".into());
+            if let Err(err) = mg.create_map("maplibre-canvas") {
+                console::error_1(&format!("Failed to create map: {err:?}").into());
+                return;
+            }
+
+            console::log_1(&"Adding map controls...".into());
+            if let Err(err) = mg.add_map_controls() {
+                console::error_1(&format!("Failed to add map controls: {err:?}").into());
+                return;
+            }
+
+            console::log_1(&"Setting up map data...".into());
+            if let Err(err) = mg.setup_map_data() {
+                console::error_1(&format!("Failed to set up map data: {err:?}").into());
+                return;
+            }
+
+            console::log_1(&"Map initialization completed successfully".into());
+        }) as Box<dyn FnMut()>);
+
+        // Load the main MapLibre script and pass our closure
+        console::log_1(&"Loading MapLibre script...".into());
+        let script_result = load_script(
+            "https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js",
+            Some(on_load),
+        );
+
+        if let Err(err) = script_result {
+            console::error_1(&format!("Failed to load MapLibre script: {:?}", err).into());
+        }
+
+        console::log_1(&"Canvas effect setup completed".into());
+
+        // Return an empty cleanup closure
+        (|| {
+            console::log_1(&"Canvas effect cleanup called".into());
+        })()
+    });
+
+    // 3) Render the container in your JSX/RSX
     rsx! {
         div {
             id: "map-container",
-            style: "width: 100%; height: 100vh; position: relative;",
-
+            style: "position:relative; width:100%; height:100vh;",
             div {
-                id: map_id,
-                style: "position: absolute; top: 0; bottom: 0; width: 100%; height: 100%;"
+                id: "maplibre-canvas",
+                style: "position:absolute; top:0; bottom:0; width:100%;"
             }
         }
     }
-}
-
-#[cfg(feature = "web")]
-fn update_layer_visibility(layers: &TflLayers) {
-    use wasm_bindgen::JsValue;
-
-    // Convert our layers to a JavaScript object to pass to the map
-    let js_code = format!(
-        r#"
-        if (window.mapInstance) {{
-            // Update tube layer visibility
-            if (window.mapInstance.getLayer('central-line-layer')) {{
-                window.mapInstance.setLayoutProperty(
-                    'central-line-layer',
-                    'visibility',
-                    {} ? 'visible' : 'none'
-                );
-            }}
-            if (window.mapInstance.getLayer('northern-line-layer')) {{
-                window.mapInstance.setLayoutProperty(
-                    'northern-line-layer',
-                    'visibility',
-                    {} ? 'visible' : 'none'
-                );
-            }}
-
-            // Update overground layer visibility
-            if (window.mapInstance.getLayer('overground-line-layer')) {{
-                window.mapInstance.setLayoutProperty(
-                    'overground-line-layer',
-                    'visibility',
-                    {} ? 'visible' : 'none'
-                );
-            }}
-
-            // Update stations layer visibility
-            if (window.mapInstance.getLayer('stations-layer')) {{
-                window.mapInstance.setLayoutProperty(
-                    'stations-layer',
-                    'visibility',
-                    {} ? 'visible' : 'none'
-                );
-            }}
-            if (window.mapInstance.getLayer('station-labels')) {{
-                window.mapInstance.setLayoutProperty(
-                    'station-labels',
-                    'visibility',
-                    {} ? 'visible' : 'none'
-                );
-            }}
-        }}
-    "#,
-        layers.tube, layers.tube, layers.overground, layers.stations, layers.stations
-    );
-
-    let _ = js_sys::eval(&js_code);
-}
-
-#[cfg(not(feature = "web"))]
-fn update_layer_visibility(_layers: &TflLayers) {
-    // Do nothing on non-web targets
-}
-
-#[cfg(feature = "web")]
-fn initialize_map_libre(map_id: &str) {
-    use wasm_bindgen::{JsCast, JsValue};
-
-    let window = web_sys::window().expect("no global window exists");
-    let document = window.document().expect("no document exists on window");
-
-    // Add MapLibre CSS
-    let head = document.head().expect("document should have head");
-    let link = document
-        .create_element("link")
-        .expect("could not create link element");
-    link.set_attribute("rel", "stylesheet")
-        .expect("could not set attribute");
-    link.set_attribute(
-        "href",
-        "https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css",
-    )
-    .expect("could not set attribute");
-    head.append_child(&link).expect("could not append child");
-
-    // Add Layer Switcher CSS
-    let layer_switcher_css = document
-        .create_element("link")
-        .expect("could not create link element");
-    layer_switcher_css
-        .set_attribute("rel", "stylesheet")
-        .expect("could not set attribute");
-    layer_switcher_css
-        .set_attribute("href", "/assets/layerswitcher.css")
-        .expect("could not set attribute");
-    head.append_child(&layer_switcher_css)
-        .expect("could not append layer switcher CSS");
-
-    // Add KeyControl script
-    let key_control_script = document
-        .create_element("script")
-        .expect("could not create script element");
-    key_control_script.set_inner_html(include_str!("./js/key_control.js"));
-    document
-        .head()
-        .expect("document should have head")
-        .append_child(&key_control_script)
-        .expect("could not append key control script to head");
-
-    // Add LayerSwitcher script
-    let layer_switcher_script = document
-        .create_element("script")
-        .expect("could not create script element");
-    layer_switcher_script.set_inner_html(include_str!("./js/layer_switcher.js"));
-    document
-        .head()
-        .expect("document should have head")
-        .append_child(&layer_switcher_script)
-        .expect("could not append layer switcher script to head");
-
-    // Add MapLibre script and initialize map
-    let script = document
-        .create_element("script")
-        .expect("could not create script element");
-    script
-        .set_attribute(
-            "src",
-            "https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js",
-        )
-        .expect("could not set attribute");
-
-    // Set up an onload handler
-    let map_container_id = map_id.to_string();
-    let onload_handler = wasm_bindgen::closure::Closure::wrap(Box::new(move || {
-        // Get the map init code and add our KeyControl
-        let init_code = format!(include_str!("./js/map_init.js"), map_container_id);
-
-        let _ = js_sys::eval(&init_code);
-    }) as Box<dyn FnMut()>);
-
-    script
-        .set_attribute("onload", "window.onloadHandler()")
-        .expect("could not set onload");
-    // Fix: Use Reflect.set instead of the global().set method
-    js_sys::Reflect::set(
-        &js_sys::global(),
-        &JsValue::from_str("onloadHandler"),
-        &onload_handler.as_ref().unchecked_ref(),
-    )
-    .expect("could not set global onload handler");
-    onload_handler.forget(); // Prevent the closure from being dropped
-
-    document
-        .body()
-        .expect("document should have body")
-        .append_child(&script)
-        .expect("could not append script to body");
-}
-
-#[cfg(not(feature = "web"))]
-fn initialize_map_libre(_map_id: &str) {
-    // Do nothing on non-web targets
 }
