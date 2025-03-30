@@ -268,7 +268,11 @@ fn add_map_layers(map_instance: &JsValue, simulation_enabled: bool) -> Result<()
     // Central Line
     console::log_1(&"Adding Central Line".into());
     let central_coords = [
-        (-0.22, 51.51), (-0.18, 51.52), (-0.14, 51.515), (-0.10, 51.52), (-0.05, 51.52),
+        (-0.22, 51.51),
+        (-0.18, 51.52),
+        (-0.14, 51.515),
+        (-0.10, 51.52),
+        (-0.05, 51.52),
     ];
     let central_source = create_geojson_line_source(&central_coords)?;
     map.add_source("central-line", &central_source);
@@ -281,7 +285,10 @@ fn add_map_layers(map_instance: &JsValue, simulation_enabled: bool) -> Result<()
     // Northern Line
     console::log_1(&"Adding Northern Line".into());
     let northern_coords = [
-        (-0.15, 51.48), (-0.12, 51.50), (-0.12, 51.53), (-0.14, 51.55),
+        (-0.15, 51.48),
+        (-0.12, 51.50),
+        (-0.12, 51.53),
+        (-0.14, 51.55),
     ];
     let northern_source = create_geojson_line_source(&northern_coords)?;
     map.add_source("northern-line", &northern_source);
@@ -294,7 +301,10 @@ fn add_map_layers(map_instance: &JsValue, simulation_enabled: bool) -> Result<()
     // Overground
     console::log_1(&"Adding Overground".into());
     let overground_coords = [
-        (-0.20, 51.53), (-0.16, 51.54), (-0.10, 51.54), (-0.05, 51.55),
+        (-0.20, 51.53),
+        (-0.16, 51.54),
+        (-0.10, 51.54),
+        (-0.05, 51.55),
     ];
     let overground_source = create_geojson_line_source(&overground_coords)?;
     map.add_source("overground-line", &overground_source);

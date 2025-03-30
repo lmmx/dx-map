@@ -7,7 +7,7 @@
   position: absolute;
   max-height: 85vh;
   overflow-y: auto;
-  top: 45px;
+  top: 145px;
   right: 10px;
   background-color: white;
   border-radius: 4px;
@@ -73,8 +73,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
+  font-size: 31px;
   font-weight: bold;
+  margin-top: -7px;
+  margin-bottom: 7px;
 }
 
 .layer-switcher-button::after {

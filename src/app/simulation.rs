@@ -81,19 +81,22 @@ pub fn expose_simulation_functions() -> Result<(), JsValue> {
             &window,
             &JsValue::from_str("rust_initialize_simulation"),
             init_closure.as_ref(),
-        ).expect("Could not set rust_initialize_simulation");
+        )
+        .expect("Could not set rust_initialize_simulation");
 
         js_sys::Reflect::set(
             &window,
             &JsValue::from_str("rust_toggle_simulation"),
             toggle_closure.as_ref(),
-        ).expect("Could not set rust_toggle_simulation");
+        )
+        .expect("Could not set rust_toggle_simulation");
 
         js_sys::Reflect::set(
             &window,
             &JsValue::from_str("rust_reset_simulation"),
             reset_closure.as_ref(),
-        ).expect("Could not set rust_reset_simulation");
+        )
+        .expect("Could not set rust_reset_simulation");
 
         console::log_1(&"Simulation functions exposed to JavaScript".into());
     }
@@ -539,15 +542,14 @@ fn serialize_geojson_data(geojson: &Object) -> String {
     "#;
 
     // Try to call the function safely
-    match js_sys::Function::new_with_args("obj", js_code)
-        .call1(&JsValue::NULL, &geojson.into()) {
+    match js_sys::Function::new_with_args("obj", js_code).call1(&JsValue::NULL, &geojson.into()) {
         Ok(result) => {
             // Try to convert to string, fallback to empty JSON if it fails
             result.as_string().unwrap_or_else(|| {
                 console::error_1(&"Failed to get string from serialized result".into());
                 "{}".to_string()
             })
-        },
+        }
         Err(err) => {
             // Log the error and return empty JSON
             console::error_1(&format!("Failed to serialize GeoJSON: {:?}", err).into());
@@ -599,25 +601,34 @@ fn debug_simulation_state(sim_state: &SimulationState) {
     static mut COUNTER: u32 = 0;
     unsafe {
         COUNTER += 1;
-        if COUNTER % 60 != 0 { // Log every ~60 frames (roughly 1 second)
+        if COUNTER % 60 != 0 {
+            // Log every ~60 frames (roughly 1 second)
             return;
         }
     }
 
     // Log general state
-    console::log_1(&format!("Simulation state: {} vehicles, paused: {}", 
-        sim_state.vehicles.len(), sim_state.is_paused).into());
-    
+    console::log_1(
+        &format!(
+            "Simulation state: {} vehicles, paused: {}",
+            sim_state.vehicles.len(),
+            sim_state.is_paused
+        )
+        .into(),
+    );
+
     // Log a sample vehicle
     if !sim_state.vehicles.is_empty() {
         let sample = &sim_state.vehicles[0];
-        console::log_1(&format!("Sample vehicle: id={}, type={:?}, pos=({:.4}, {:.4})", 
-            sample.id, 
-            sample.vehicle_type, 
-            sample.lng, 
-            sample.lat).into());
+        console::log_1(
+            &format!(
+                "Sample vehicle: id={}, type={:?}, pos=({:.4}, {:.4})",
+                sample.id, sample.vehicle_type, sample.lng, sample.lat
+            )
+            .into(),
+        );
     }
-    
+
     // Check if vehicles source exists and log its state
     let js_code = r#"
     let result = "unknown";
@@ -639,6 +650,6 @@ fn debug_simulation_state(sim_state: &SimulationState) {
     }
     console.log("Vehicles source check:", result);
     "#;
-    
+
     let _ = js_sys::eval(js_code);
 }

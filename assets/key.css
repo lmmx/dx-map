@@ -2,7 +2,7 @@
 .oim-key-control {
   min-height: 30px;
   min-width: 30px;
-  background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12" y2="16"/></svg>');
+  background: #fff url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="%23000000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>');
   background-repeat: no-repeat;
   background-size: 20px 20px;
   background-position: center;
@@ -15,7 +15,7 @@
   position: absolute;
   overflow: hidden;
   border-radius: 4px;
-  top: 70px;
+  top: 100px;
   right: 10px;
   background-color: #fff;
   z-index: 1000;
@@ -61,7 +61,7 @@
 .oim-key-body {
   position: relative;
   top: 0;
-  width: 100%;
+  width: 90%;
   height: calc(100% - 2.2em);
   padding: 0.5em 0.2em 0.5em 0.5em;
   overflow-y: auto;
@@ -82,6 +82,7 @@
 
 .oim-key-body table tr {
   padding: 0px;
+  font-size: 15px;
 }
 
 .oim-key-body table td {
@@ -90,7 +91,7 @@
 
 .oim-key-body table tr td:nth-child(2) {
   width: 30px;
-  padding: 0 0 0 1em;
+  padding: 0 0 0 0.5em;
   text-align: center;
 }
 

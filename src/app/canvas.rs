@@ -34,8 +34,6 @@ pub fn Canvas(layers: Signal<TflLayers>) -> Element {
         // Load any CSS or inline scripts - these run once since they're in a use_effect with no dependencies
         console::log_1(&"Loading CSS files...".into());
         let _ = load_css("https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css");
-        let _ = load_css("/assets/layerswitcher.css");
-        let _ = load_css("/assets/key.css"); // Make sure we load the key.css
 
         console::log_1(&"Loading JS controls...".into());
         let _ = add_inline_script(include_str!("../app/js/key_control.js"));
