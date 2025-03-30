@@ -5,10 +5,10 @@ mod key_panel;
 mod layer_panel;
 mod simulation; // New module for vehicle simulation
 
+use crate::maplibre::helpers;
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
-use crate::maplibre::helpers;
 
 // If you have images or CSS as assets, define them with Dioxus' asset! macro
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -58,19 +58,20 @@ pub fn app() -> Element {
 
     // Initialize simulation JS when app loads
     use_effect(move || {
-	let controller_script = format!(r#"
+        let controller_script = format!(
+            r#"
 	// Global simulation controller
 	const SimulationController = {{
 	  initialized: false,
 	  running: false,
-	  
+
 	  initialize: function() {{
 	    console.log("SimulationController.initialize() called");
 	    if (this.initialized) {{
 	      console.log("Simulation already initialized, skipping");
 	      return;
 	    }}
-	    
+
 	    // Call the Rust initialization function
 	    if (typeof window.rust_initialize_simulation === 'function') {{
 	      console.log("Calling rust_initialize_simulation()");
@@ -81,21 +82,21 @@ pub fn app() -> Element {
 	      console.error("rust_initialize_simulation function not found");
 	    }}
 	  }},
-	  
+
 	  toggle: function() {{
 	    console.log("SimulationController.toggle() called");
 	    if (!this.initialized) {{
 	      this.initialize();
 	      return;
 	    }}
-	    
+
 	    if (typeof window.rust_toggle_simulation === 'function') {{
 	      window.rust_toggle_simulation();
 	      this.running = !this.running;
 	      console.log("Simulation running:", this.running);
 	    }}
 	  }},
-	  
+
 	  reset: function() {{
 	    console.log("SimulationController.reset() called");
 	    if (typeof window.rust_reset_simulation === 'function') {{
@@ -131,28 +132,30 @@ pub fn app() -> Element {
         }} else {{
           console.log("Automatic simulation initialization disabled");
         }}
-	"#, layers.read().simulation);
-	if let Err(e) = helpers::add_inline_script(&controller_script) {
-	    web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
-	} else {
-	    web_sys::console::log_1(&"Simulation controller script added".into());
-	}
+	"#,
+            layers.read().simulation
+        );
+        if let Err(e) = helpers::add_inline_script(&controller_script) {
+            web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
+        } else {
+            web_sys::console::log_1(&"Simulation controller script added".into());
+        }
     });
 
     use_effect(move || {
-	// Try to expose simulation functions if available
-	if let Ok(_) = simulation::expose_simulation_functions() {
-	    web_sys::console::log_1(&"Simulation functions exposed on app start".into());
-	}
-	
-	// Add the controller script
-	let controller_script = r#"
+        // Try to expose simulation functions if available
+        if let Ok(_) = simulation::expose_simulation_functions() {
+            web_sys::console::log_1(&"Simulation functions exposed on app start".into());
+        }
+
+        // Add the controller script
+        let controller_script = r#"
 	// SimulationController code here...
 	"#;
-	
-	if let Err(e) = helpers::add_inline_script(controller_script) {
-	    web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
-	}
+
+        if let Err(e) = helpers::add_inline_script(controller_script) {
+            web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
+        }
     });
 
     rsx! {

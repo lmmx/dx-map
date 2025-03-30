@@ -33,15 +33,15 @@ class SimulationControl {
     // Add controls
     const controls = document.createElement('div');
     controls.className = 'simulation-controls';
-    
+
     const playPauseButton = document.createElement('button');
     playPauseButton.id = 'play-pause-simulation';
     playPauseButton.textContent = 'Play/Pause';
-    
+
     const resetButton = document.createElement('button');
     resetButton.id = 'reset-simulation';
     resetButton.textContent = 'Reset';
-    
+
     controls.appendChild(playPauseButton);
     controls.appendChild(resetButton);
 
