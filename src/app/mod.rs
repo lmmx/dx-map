@@ -16,6 +16,7 @@ const LOGO_SVG: Asset = asset!("/assets/header.svg");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 const TFL_CSS: Asset = asset!("/assets/tfl.css");
 const KEY_CSS: Asset = asset!("/assets/key.css");
+const LAYER_CSS: Asset = asset!("/assets/layerswitcher.css");
 
 // Model to track layer visibility
 #[derive(Clone, Copy, PartialEq)]
@@ -163,6 +164,7 @@ pub fn app() -> Element {
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TFL_CSS }
         document::Link { rel: "stylesheet", href: KEY_CSS }
+        document::Link { rel: "stylesheet", href: LAYER_CSS }
 
         header {
             img { src: LOGO_SVG }
