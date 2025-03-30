@@ -63,7 +63,7 @@ pub fn Canvas(layers: Signal<TflLayers>) -> Element {
             }
 
             console::log_1(&"Setting up map data...".into());
-            if let Err(err) = mg.setup_map_data() {
+            if let Err(err) = mg.setup_map_data(layers.read().simulation) {
                 console::error_1(&format!("Failed to set up map data: {err:?}").into());
                 return;
             }
