@@ -105,7 +105,7 @@ impl MapLibreManager {
 
     /// Set up map data sources and layers
     /// This is likely where the issue is happening with the 'load' event
-    pub fn setup_map_data(&mut self) -> Result<(), JsValue> {
+    pub fn setup_map_data(&mut self, simulation_enabled: bool) -> Result<(), JsValue> {
         console::log_1(&"MapLibreManager::setup_map_data() called".into());
 
         if let Some(map) = &self.map {
@@ -118,6 +118,8 @@ impl MapLibreManager {
 
             console::log_1(&format!("Creating 'load' event listener #{}", listener_id).into());
 
+            // Pass simulation_enabled to closure
+            let simulation_enabled_copy = simulation_enabled;
             // Set up an onload handler for the map - THIS IS LIKELY WHERE THE RECURSION HAPPENS
             let load_handler = Closure::wrap(Box::new(move || {
                 console::log_1(
@@ -151,7 +153,7 @@ impl MapLibreManager {
 
                 console::log_1(&"Adding map layers".into());
                 // Add our sources and layers
-                let result = add_map_layers(&map_instance);
+                let result = add_map_layers(&map_instance, simulation_enabled_copy);
 
                 if let Err(err) = result {
                     console::error_1(&format!("Error adding map layers: {:?}", err).into());
@@ -257,7 +259,7 @@ impl MapLibreManager {
 }
 
 /// Helper function to add MapLibre layers
-fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
+fn add_map_layers(map_instance: &JsValue, simulation_enabled: bool) -> Result<(), JsValue> {
     console::log_1(&"add_map_layers() called".into());
 
     let map: Map = map_instance.clone().into();
@@ -339,27 +341,31 @@ fn add_map_layers(map_instance: &JsValue) -> Result<(), JsValue> {
 
     console::log_1(&"All map layers added successfully".into());
 
-    // Initialize the vehicle simulation after all other layers are added
-    console::log_1(&"Initializing vehicle simulation from map_layers".into());
-    let init_simulation_js = r#"
-        if (typeof window.initializeSimulation === 'function') {
-            console.log('Calling window.initializeSimulation()');
-            window.initializeSimulation();
-        } else {
-            console.log('Creating initializeSimulation placeholder');
-            // Create a placeholder function that will be replaced when the simulation module loads
-            window.initializeSimulation = function() {
-                console.log('Placeholder initializeSimulation called - will retry in 1 second');
-                setTimeout(() => {
-                    if (typeof window.realInitializeSimulation === 'function') {
-                        window.realInitializeSimulation();
-                    }
-                }, 1000);
-            };
-        }
-    "#;
-    let _ = js_sys::eval(init_simulation_js);
-    console::log_1(&"Vehicle simulation initialization requested".into());
+    if simulation_enabled {
+        // Initialize the vehicle simulation after all other layers are added
+        console::log_1(&"Initializing vehicle simulation from map_layers".into());
+        let init_simulation_js = r#"
+            if (typeof window.initializeSimulation === 'function') {
+                console.log('Calling window.initializeSimulation()');
+                window.initializeSimulation();
+            } else {
+                console.log('Creating initializeSimulation placeholder');
+                // Create a placeholder function that will be replaced when the simulation module loads
+                window.initializeSimulation = function() {
+                    console.log('Placeholder initializeSimulation called - will retry in 1 second');
+                    setTimeout(() => {
+                        if (typeof window.realInitializeSimulation === 'function') {
+                            window.realInitializeSimulation();
+                        }
+                    }, 1000);
+                };
+            }
+        "#;
+        let _ = js_sys::eval(init_simulation_js);
+        console::log_1(&"Vehicle simulation initialization requested".into());
+    } else {
+        console::log_1(&"Simulation disabled, skipping initialization".into());
+    }
 
     Ok(())
 }

@@ -44,7 +44,7 @@ impl Default for TflLayers {
             cable_car: true,
             stations: true,
             depots: false,
-            simulation: true, // Show simulation by default
+            simulation: false, // Show simulation by default
         }
     }
 }
@@ -58,74 +58,81 @@ pub fn app() -> Element {
 
     // Initialize simulation JS when app loads
     use_effect(move || {
-	let controller_script = r#"
+	let controller_script = format!(r#"
 	// Global simulation controller
-	const SimulationController = {
+	const SimulationController = {{
 	  initialized: false,
 	  running: false,
 	  
-	  initialize: function() {
+	  initialize: function() {{
 	    console.log("SimulationController.initialize() called");
-	    if (this.initialized) {
+	    if (this.initialized) {{
 	      console.log("Simulation already initialized, skipping");
 	      return;
-	    }
+	    }}
 	    
 	    // Call the Rust initialization function
-	    if (typeof window.rust_initialize_simulation === 'function') {
+	    if (typeof window.rust_initialize_simulation === 'function') {{
 	      console.log("Calling rust_initialize_simulation()");
 	      window.rust_initialize_simulation();
 	      this.initialized = true;
 	      this.running = true;
-	    } else {
+	    }} else {{
 	      console.error("rust_initialize_simulation function not found");
-	    }
-	  },
+	    }}
+	  }},
 	  
-	  toggle: function() {
+	  toggle: function() {{
 	    console.log("SimulationController.toggle() called");
-	    if (!this.initialized) {
+	    if (!this.initialized) {{
 	      this.initialize();
 	      return;
-	    }
+	    }}
 	    
-	    if (typeof window.rust_toggle_simulation === 'function') {
+	    if (typeof window.rust_toggle_simulation === 'function') {{
 	      window.rust_toggle_simulation();
 	      this.running = !this.running;
 	      console.log("Simulation running:", this.running);
-	    }
-	  },
+	    }}
+	  }},
 	  
-	  reset: function() {
+	  reset: function() {{
 	    console.log("SimulationController.reset() called");
-	    if (typeof window.rust_reset_simulation === 'function') {
+	    if (typeof window.rust_reset_simulation === 'function') {{
 	      window.rust_reset_simulation();
 	      this.running = true;
 	      console.log("Simulation reset and running");
-	    }
-	  }
-	};
+	    }}
+	  }}
+	}};
 
 	// Make it globally available
 	window.SimulationController = SimulationController;
 
-	// Initialize when map is ready
-	if (window.mapInstance && window.mapInstance.isStyleLoaded()) {
-	  setTimeout(function() {
-	    SimulationController.initialize();
-	  }, 1000);
-	} else {
-	  const initInterval = setInterval(function() {
-	    if (window.mapInstance && window.mapInstance.isStyleLoaded()) {
-	      clearInterval(initInterval);
-	      setTimeout(function() {
-		SimulationController.initialize();
-	      }, 1000);
-	    }
-	  }, 1000);
-	}
-	"#;
-	if let Err(e) = helpers::add_inline_script(controller_script) {
+        // Only initialize automatically if simulation is enabled
+        const simulationEnabled = {0};
+
+        if (simulationEnabled) {{
+	  // Initialize when map is ready
+	  if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
+	    setTimeout(function() {{
+	      SimulationController.initialize();
+	    }}, 1000);
+	  }} else {{
+	    const initInterval = setInterval(function() {{
+	      if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
+	        clearInterval(initInterval);
+	        setTimeout(function() {{
+	  	SimulationController.initialize();
+	        }}, 1000);
+	      }}
+	    }}, 1000);
+	  }}
+        }} else {{
+          console.log("Automatic simulation initialization disabled");
+        }}
+	"#, layers.read().simulation);
+	if let Err(e) = helpers::add_inline_script(&controller_script) {
 	    web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
 	} else {
 	    web_sys::console::log_1(&"Simulation controller script added".into());
