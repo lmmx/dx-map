@@ -1,5 +1,4 @@
-use dioxus::prelude::*;
-use js_sys::{Array, Math, Object, Reflect};
+use js_sys::{Math, Object};
 use std::cell::RefCell;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::{console, window};

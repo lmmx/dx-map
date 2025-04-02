@@ -3,9 +3,14 @@ use dioxus::prelude::*;
 mod canvas;
 mod key_panel;
 mod layer_panel;
-mod simulation; // New module for vehicle simulation
+mod simulation;
+mod tfl_helper;
 
 use crate::maplibre::helpers;
+use tfl_helper::TflHelper;
+use wasm_bindgen::prelude::*;
+use js_sys::Promise;
+use web_sys::console;
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
@@ -56,6 +61,113 @@ pub fn app() -> Element {
     let mut show_key_panel = use_signal(|| false);
     let mut show_simulation_panel = use_signal(|| false); // New signal for simulation controls
     let layers = use_signal(|| TflLayers::default());
+    let helper = use_signal(|| TflHelper::new());
+
+    // Initialize TfL data when the map is ready
+    use_effect(move || {
+        console::log_1(&"Setting up TfL data...".into());
+        
+        // First wait for the map to be loaded
+        let js_code = r#"
+            function waitForMap() {
+                return new Promise((resolve, reject) => {
+                    if (window.mapInstance) {
+                        return resolve(true);
+                    }
+                    
+                    const MAX_ATTEMPTS = 20;
+                    let attempts = 0;
+                    
+                    const interval = setInterval(() => {
+                        attempts++;
+                        if (window.mapInstance) {
+                            clearInterval(interval);
+                            return resolve(true);
+                        }
+                        
+                        if (attempts >= MAX_ATTEMPTS) {
+                            clearInterval(interval);
+                            return reject(new Error("Map not loaded after timeout"));
+                        }
+                    }, 500);
+                });
+            }
+            
+            waitForMap();
+        "#;
+        
+        let promise = Promise::new(&mut |resolve, reject| {
+            if let Err(e) = js_sys::eval(js_code) {
+                reject.call1(&JsValue::NULL, &JsValue::from_str(&format!("Failed to setup wait: {:?}", e))).unwrap();
+            }
+        });
+        
+        // Spawn an async task to wait for the map and then initialize TfL
+        wasm_bindgen_futures::spawn_local(async move {
+            match wasm_bindgen_futures::JsFuture::from(promise).await {
+                Ok(_) => {
+                    console::log_1(&"Map is loaded, initializing TfL data...".into());
+                    
+                    // Wait a bit longer to ensure map is fully initialized
+                    let delay_promise = Promise::new(&mut |resolve, _| {
+                        let timeout_code = r#"
+                            setTimeout(() => {
+                                resolve(true);
+                            }, 1000);
+                        "#;
+                        let _ = js_sys::eval(timeout_code);
+                    });
+                    
+                    let _ = wasm_bindgen_futures::JsFuture::from(delay_promise).await;
+                    
+                    // Now initialize the TfL helper
+                    if let Err(e) = helper.write().initialize(layers.read().simulation) {
+                        console::error_1(&format!("Failed to initialize TfL data: {:?}", e).into());
+                    } else {
+                        console::log_1(&"TfL data initialized successfully".into());
+                    }
+                },
+                Err(e) => {
+                    console::error_1(&format!("Map load timed out: {:?}", e).into());
+                }
+            }
+        });
+    });
+    
+    // Add effects to update TfL layers when settings change
+    use_effect(move || {
+        // Update visibility when any layer option changes
+        if let Err(e) = helper.read().update_visibility(&layers.read()) {
+            console::error_1(&format!("Failed to update TfL visibility: {:?}", e).into());
+        }
+    });
+    
+    // Add effect to update simulation state
+    use_effect(move || {
+        // Toggle simulation when simulation flag changes
+        let simulation_enabled = layers.read().simulation;
+        
+        console::log_1(&format!("Simulation enabled: {}", simulation_enabled).into());
+        
+        // Call toggle_simulation if it should be different than current state
+        if let Err(e) = helper.write().toggle_simulation() {
+            console::error_1(&format!("Failed to toggle simulation: {:?}", e).into());
+        }
+    });
+    
+    // Add effect to update simulation speed
+    use_effect(move || {
+        let speed = layers.read().simulation_speed;
+        
+        // Convert to 0.0-1.0 range
+        let normalized_speed = speed as f64 / 5.0;
+        
+        console::log_1(&format!("Setting simulation speed: {} ({})", speed, normalized_speed).into());
+        
+        if let Err(e) = helper.write().set_simulation_speed(normalized_speed) {
+            console::error_1(&format!("Failed to set simulation speed: {:?}", e).into());
+        }
+    });
 
     // Initialize simulation JS when app loads
     use_effect(move || {

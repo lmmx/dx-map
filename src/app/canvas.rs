@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use wasm_bindgen::{JsValue, closure::Closure};
+use wasm_bindgen::closure::Closure;
 use web_sys::console;
 
 use super::TflLayers;

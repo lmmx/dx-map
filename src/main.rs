@@ -6,7 +6,8 @@ use console_log;
 use log::Level;
 
 mod app;
-mod maplibre; // Add the new MapLibre module
+mod maplibre;
+mod tfl;
 
 /// Entry point for Dioxus
 fn main() {

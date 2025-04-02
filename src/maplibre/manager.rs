@@ -1,8 +1,6 @@
 use crate::maplibre::bindings::*;
 use crate::maplibre::helpers::*;
-use std::cell::RefCell;
 use std::collections::HashMap;
-use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 use web_sys::{console, window};
 
