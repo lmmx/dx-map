@@ -1085,9 +1085,8 @@ impl TflMapIntegration {
         let js_code = r#"
             if (window.SimulationController) {
                 window.SimulationController.toggle();
-                return window.SimulationController.isRunning;
-            }}
-            return false;
+                window.SimulationController.isRunning;
+            } else false;
         "#;
 
         let result = js_sys::eval(js_code)?;
@@ -1130,10 +1129,9 @@ impl TflMapIntegration {
         let js_code = format!(
             r#"
             if (window.SimulationController) {{
-                window.SimulationController.setSpeed({{{}}});
-                return true;
-            }}
-            return false;
+                window.SimulationController.setSpeed({});
+                true;
+            }} else {{ false }};
             "#,
             speed
         );
