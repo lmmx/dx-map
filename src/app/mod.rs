@@ -35,7 +35,9 @@ pub struct TflLayers {
     pub cable_car: bool,
     pub stations: bool,
     pub depots: bool,
-    pub simulation: bool, // New field for simulation visibility
+    pub simulation: bool, // visible?
+    pub simulation_speed: i32, // fps
+    pub show_all_stations: bool,
 }
 
 impl Default for TflLayers {
@@ -50,7 +52,9 @@ impl Default for TflLayers {
             cable_car: true,
             stations: true,
             depots: false,
-            simulation: false, // Show simulation by default
+            simulation: false, // No simulation by default
+            simulation_speed: 30,
+            show_all_stations: false,
         }
     }
 }
@@ -61,7 +65,7 @@ pub fn app() -> Element {
     let mut show_key_panel = use_signal(|| false);
     let mut show_simulation_panel = use_signal(|| false); // New signal for simulation controls
     let layers = use_signal(|| TflLayers::default());
-    let helper = use_signal(|| TflHelper::new());
+    let mut helper = use_signal(|| TflHelper::new());
 
     // Initialize TfL data when the map is ready
     use_effect(move || {

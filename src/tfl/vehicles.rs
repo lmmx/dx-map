@@ -17,12 +17,12 @@ pub struct Vehicle {
     pub id: usize,
     pub vehicle_type: VehicleType,
     pub route_name: String,
-    pub current_position: (f64, f64), // (longitude, latitude)
+    pub current_position: RefCell<(f64, f64)>, // (longitude, latitude)
     pub start_position: (f64, f64),
     pub end_position: (f64, f64),
-    pub progress: f64,             // 0.0 to 1.0
+    pub progress: RefCell<f64>,             // 0.0 to 1.0
     pub speed: f64,                // movement per tick (0.0 to 0.1)
-    pub direction: i8,             // 1 for forward, -1 for reverse
+    pub direction: RefCell<i8>,             // 1 for forward, -1 for reverse
 }
 
 impl Vehicle {
@@ -54,34 +54,35 @@ impl Vehicle {
             id,
             vehicle_type,
             route_name,
-            current_position,
+            current_position: RefCell::new(current_position),
             start_position,
             end_position,
-            progress,
+            progress: RefCell::new(progress),
             speed,
-            direction,
+            direction: RefCell::new(direction),
         }
     }
     
     // Update vehicle position
     pub fn update(&mut self) {
         // Update progress based on speed and direction
-        self.progress += self.speed * (self.direction as f64);
+        let mut progress = self.progress.borrow_mut();
+        *progress += self.speed * (*self.direction.borrow() as f64);
         
         // Check if we've reached the end or beginning
-        if self.progress >= 1.0 {
-            self.progress = 1.0;
-            self.direction = -1;
-        } else if self.progress <= 0.0 {
-            self.progress = 0.0;
-            self.direction = 1;
+        if *progress >= 1.0 {
+            *progress = 1.0;
+            *self.direction.borrow_mut() = -1;
+        } else if *progress <= 0.0 {
+            *progress = 0.0;
+            *self.direction.borrow_mut() = 1;
         }
         
         // Update current position
-        self.current_position = Self::interpolate_position(
+        *self.current_position.borrow_mut() = Self::interpolate_position(
             self.start_position,
             self.end_position,
-            self.progress,
+            *progress,
         );
     }
     
@@ -135,7 +136,7 @@ impl SimulationController {
         Ok(())
     }
     
-    // Reset the simulation
+    /// Reset the simulation
     pub fn reset(&self) -> Result<(), JsValue> {
         // Pause first
         self.pause()?;
@@ -143,42 +144,36 @@ impl SimulationController {
         // Reset all vehicles to random starting positions
         for vehicle in &self.vehicles {
             // We need to cast to mutable - a bit of a hack since we're using clones
-            let vehicle_ptr = vehicle as *const Vehicle as *mut Vehicle;
-            unsafe {
-                let v = &mut *vehicle_ptr;
-                v.progress = Math::random();
-                v.current_position = Vehicle::interpolate_position(
-                    v.start_position,
-                    v.end_position,
-                    v.progress,
-                );
-                v.direction = if Math::random() > 0.5 { 1 } else { -1 };
-            }
+            let new_progress = Math::random();
+            *vehicle.progress.borrow_mut() = new_progress;
+
+            *vehicle.current_position.borrow_mut() = Vehicle::interpolate_position(
+                vehicle.start_position,
+                vehicle.end_position,
+                new_progress,
+            );
+
+            *vehicle.direction.borrow_mut() = if Math::random() > 0.5 { 1 } else { -1 };
         }
         
         // Restart the simulation
         self.start()
     }
     
-    // Request an animation frame
+    /// Request an animation frame
     fn request_animation_frame(&self) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window found"))?;
         
         // Create a clone of self for the closure
-        let controller_clone = self.clone();
+        let mut controller_clone = self.clone();
         
         // Create the animation frame callback
         let callback = Closure::wrap(Box::new(move || {
             // Only proceed if we're still running
             if *controller_clone.is_running.borrow() {
                 // Update all vehicles
-                for vehicle in &controller_clone.vehicles {
-                    // Same hack as in reset() to modify cloned vehicles
-                    let vehicle_ptr = vehicle as *const Vehicle as *mut Vehicle;
-                    unsafe {
-                        let v = &mut *vehicle_ptr;
-                        v.update();
-                    }
+                for vehicle in &mut controller_clone.vehicles {
+                    vehicle.update();
                 }
                 
                 // Update the map with new vehicle positions
@@ -203,7 +198,7 @@ impl SimulationController {
         Ok(())
     }
     
-    // Update the vehicle layer on the map
+    /// Update the vehicle layer on the map
     fn update_vehicle_layer(&self) -> Result<(), JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window found"))?;
         
@@ -256,8 +251,9 @@ impl SimulationController {
             )?;
             
             let coordinates = Array::new();
-            coordinates.push(&JsValue::from_f64(vehicle.current_position.0));
-            coordinates.push(&JsValue::from_f64(vehicle.current_position.1));
+            let current_position = vehicle.current_position.borrow();
+            coordinates.push(&JsValue::from_f64(current_position.0));
+            coordinates.push(&JsValue::from_f64(current_position.1));
             
             Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coordinates)?;
             Reflect::set(&feature, &JsValue::from_str("geometry"), &geometry)?;

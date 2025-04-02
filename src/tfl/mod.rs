@@ -94,7 +94,8 @@ impl TflDataManager {
             "return window.fs.readFile(filename, options);")
             .call2(&JsValue::null(), &filename_js, &options_obj)?;
         
-        let file_content = wasm_bindgen_futures::JsFuture::from(promise).await?;
+        let promise_obj = js_sys::Promise::resolve(&promise);
+        let file_content = wasm_bindgen_futures::JsFuture::from(promise_obj).await?;
         let content = file_content.as_string().ok_or_else(|| {
             JsValue::from_str(&format!("Could not convert file {} to string", filename))
         })?;
