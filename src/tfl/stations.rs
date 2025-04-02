@@ -34,17 +34,17 @@ impl Station {
             station_type,
         }
     }
-    
+
     // Add a tube line to the station
     pub fn add_tube_line(&mut self, line_name: &str) {
         self.tube_lines.insert(line_name.to_string());
     }
-    
+
     // Add a bus route to the station
     pub fn add_bus_route(&mut self, route_number: i32) {
         self.bus_routes.insert(route_number);
     }
-    
+
     // Check if this is an interchange station (serves multiple lines)
     pub fn is_interchange(&self) -> bool {
         (self.tube_lines.len() + self.bus_routes.len()) > 1

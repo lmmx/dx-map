@@ -1,9 +1,9 @@
 // src/maplibre/tfl_integration.rs - Separate module for TfL data integration
-use wasm_bindgen::prelude::*;
-use js_sys::{Array, Object, Reflect, Function, Promise};
-use web_sys::console;
 use crate::maplibre::bindings::*;
+use js_sys::{Array, Function, Object, Promise, Reflect};
 use std::collections::HashMap;
+use wasm_bindgen::prelude::*;
+use web_sys::console;
 
 // Create a new struct for handling TfL data specifically
 pub struct TflMapIntegration {
@@ -28,130 +28,139 @@ impl TflMapIntegration {
     }
 
     // Initialize the TfL data on the map
-    pub fn initialize(&mut self, map_instance: &Map, simulation_enabled: bool) -> Result<(), JsValue> {
+    pub fn initialize(
+        &mut self,
+        map_instance: &Map,
+        simulation_enabled: bool,
+    ) -> Result<(), JsValue> {
         console::log_1(&"Initializing TfL data on map...".into());
-        
+
         // Load the data and create the visualizations
         self.load_tfl_data(map_instance, simulation_enabled)?;
-        
+
         console::log_1(&"TfL data initialized successfully".into());
         Ok(())
     }
-    
+
     // Load TfL data from TSV files asynchronously
     fn load_tfl_data(&mut self, map: &Map, simulation_enabled: bool) -> Result<(), JsValue> {
         console::log_1(&"Loading TfL data from TSV files...".into());
-        
+
         // Setup tube lines from tube_routes.tsv
         self.setup_tube_lines(map)?;
-        
+
         // Setup bus routes from bus_routes.tsv
         self.setup_bus_routes(map)?;
-        
+
         // Setup stations from both files
         self.setup_stations(map)?;
-        
+
         // Setup vehicle simulation if enabled
         if simulation_enabled {
             self.setup_simulation(map)?;
             self.simulation_active = true;
         }
-        
+
         console::log_1(&"TfL data loaded successfully".into());
         Ok(())
     }
-    
+
     // Parse TSV file asynchronously
     fn parse_tsv_file(&self, filename: &str) -> Result<Promise, JsValue> {
         let window = web_sys::window().ok_or_else(|| JsValue::from_str("No window found"))?;
-        
+
         // Create a promise to load and parse the file
         let promise = Promise::new(&mut |resolve, reject| {
             let filename_js = JsValue::from_str(filename);
-            
+
             // Function to handle async file read
             let js_code = format!(
                 r#"
                 async function loadTsvFile(filename) {{
                     try {{
                         const content = await window.fs.readFile(filename, {{ encoding: 'utf8' }});
-                        
+
                         // Basic TSV parser
                         const lines = content.split('\n');
                         const headers = lines[0].split('\t');
-                        
+
                         const results = [];
                         for (let i = 1; i < lines.length; i++) {{
                             if (!lines[i].trim()) continue;
-                            
+
                             const fields = lines[i].split('\t');
                             const record = {{}};
-                            
+
                             for (let j = 0; j < headers.length; j++) {{
                                 record[headers[j]] = fields[j];
                             }}
-                            
+
                             results.push(record);
                         }}
-                        
+
                         return results;
                     }} catch (err) {{
                         throw new Error(`Failed to load TSV file: ${{err.message}}`);
                     }}
                 }}
-                
+
                 loadTsvFile('{}').then(resolve).catch(reject);
                 "#,
                 filename
             );
-            
+
             // Execute the JS code
             if let Err(e) = js_sys::eval(&js_code) {
-                reject.call1(&JsValue::NULL, &JsValue::from_str(&format!("Failed to execute JS: {:?}", e))).unwrap();
+                reject
+                    .call1(
+                        &JsValue::NULL,
+                        &JsValue::from_str(&format!("Failed to execute JS: {:?}", e)),
+                    )
+                    .unwrap();
             }
         });
-        
+
         Ok(promise)
     }
-    
+
     // Setup tube lines visualization
     fn setup_tube_lines(&self, map: &Map) -> Result<(), JsValue> {
         console::log_1(&"Setting up tube lines...".into());
-        
+
         // Function to process tube routes data
         let js_code = r#"
         async function setupTubeLines() {
             try {
                 // Load the TSV file
                 const content = await window.fs.readFile('tube_routes.tsv', { encoding: 'utf8' });
-                
+
                 // Parse TSV into JSON
                 const lines = content.split('\n');
                 const headers = lines[0].split('\t');
-                
+
                 const tubeRoutes = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
-                    
+
                     const fields = lines[i].split('\t');
                     const record = {};
-                    
+
                     for (let j = 0; j < headers.length; j++) {
                         record[headers[j]] = fields[j];
                     }
-                    
+
                     tubeRoutes.push(record);
                 }
-                
+
                 // Create GeoJSON for tube lines
                 const features = tubeRoutes.map(route => {
                     // Parse coordinates
                     const startCoords = route['Start Coordinates'].split(',').map(c => parseFloat(c));
                     const endCoords = route['End Coordinates'].split(',').map(c => parseFloat(c));
-                    
+
                     // Get line color
                     const lineColor = getTubeLineColor(route['Tube Line']);
-                    
+
                     return {
                         type: 'Feature',
                         properties: {
@@ -169,7 +178,7 @@ impl TflMapIntegration {
                         }
                     };
                 });
-                
+
                 // Return the GeoJSON
                 return {
                     type: 'FeatureCollection',
@@ -180,7 +189,7 @@ impl TflMapIntegration {
                 throw err;
             }
         }
-        
+
         // Helper function to get TfL colors
         function getTubeLineColor(lineName) {
             const colors = {
@@ -196,14 +205,14 @@ impl TflMapIntegration {
                 'Victoria Line': '#0098D4',
                 'Waterloo & City Line': '#95CDBA'
             };
-            
+
             return colors[lineName] || '#888888';
         }
-        
+
         // Run the setup
         setupTubeLines();
         "#;
-        
+
         // Execute the JS code to get tube lines data
         let tube_lines_promise = Promise::new(&mut |resolve, reject| {
             let run_js = format!(
@@ -212,26 +221,31 @@ impl TflMapIntegration {
                 setupTubeLines().then(resolve).catch(reject);
                 "#
             );
-            
+
             if let Err(e) = js_sys::eval(&run_js) {
-                reject.call1(&JsValue::NULL, &JsValue::from_str(&format!("Failed to setup tube lines: {:?}", e))).unwrap();
+                reject
+                    .call1(
+                        &JsValue::NULL,
+                        &JsValue::from_str(&format!("Failed to setup tube lines: {:?}", e)),
+                    )
+                    .unwrap();
             }
         });
-        
+
         // Function to wait for promise and add layers
         let wait_for_promise = format!(
             r#"
             async function addTubeLinesToMap() {{
                 try {{
                     const geojson = await arguments[0];
-                    
+
                     // Add source if it doesn't exist
                     if (!window.mapInstance.getSource('{}')) {{
                         window.mapInstance.addSource('{}', {{
                             type: 'geojson',
                             data: geojson
                         }});
-                        
+
                         // Add tube lines layer
                         window.mapInstance.addLayer({{
                             id: '{}-layer',
@@ -246,71 +260,76 @@ impl TflMapIntegration {
                                 'line-width': 4
                             }}
                         }});
-                        
+
                         console.log('Added tube lines to map');
                     }}
-                    
+
                     return true;
                 }} catch (err) {{
                     console.error('Error adding tube lines to map:', err);
                     throw err;
                 }}
             }}
-            
+
             addTubeLinesToMap();
             "#,
-            self.tube_lines_source_id, self.tube_lines_source_id,
-            self.tube_lines_source_id, self.tube_lines_source_id
+            self.tube_lines_source_id,
+            self.tube_lines_source_id,
+            self.tube_lines_source_id,
+            self.tube_lines_source_id
         );
-        
+
         // Execute the wait function
         let result = Function::new_with_args("tubeLines", &wait_for_promise)
             .call1(&JsValue::NULL, &tube_lines_promise)?;
-        
+
         // Check if we got an error
         if result.is_instance_of::<js_sys::Error>() {
-            return Err(JsValue::from_str(&format!("Error setting up tube lines: {:?}", result)));
+            return Err(JsValue::from_str(&format!(
+                "Error setting up tube lines: {:?}",
+                result
+            )));
         }
-        
+
         console::log_1(&"Tube lines setup successfully".into());
         Ok(())
     }
-    
+
     // Setup bus routes visualization
     fn setup_bus_routes(&self, map: &Map) -> Result<(), JsValue> {
         console::log_1(&"Setting up bus routes...".into());
-        
+
         // Function to process bus routes data
         let js_code = r#"
         async function setupBusRoutes() {
             try {
                 // Load the TSV file
                 const content = await window.fs.readFile('bus_routes.tsv', { encoding: 'utf8' });
-                
+
                 // Parse TSV into JSON
                 const lines = content.split('\n');
                 const headers = lines[0].split('\t');
-                
+
                 const busRoutes = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
-                    
+
                     const fields = lines[i].split('\t');
                     const record = {};
-                    
+
                     for (let j = 0; j < headers.length; j++) {
                         record[headers[j]] = fields[j];
                     }
-                    
+
                     busRoutes.push(record);
                 }
-                
+
                 // Create GeoJSON for bus routes
                 const features = busRoutes.map(route => {
                     // Parse coordinates
                     const startCoords = route['Start Coordinates'].split(',').map(c => parseFloat(c));
                     const endCoords = route['End Coordinates'].split(',').map(c => parseFloat(c));
-                    
+
                     return {
                         type: 'Feature',
                         properties: {
@@ -327,7 +346,7 @@ impl TflMapIntegration {
                         }
                     };
                 });
-                
+
                 // Return the GeoJSON
                 return {
                     type: 'FeatureCollection',
@@ -338,11 +357,11 @@ impl TflMapIntegration {
                 throw err;
             }
         }
-        
+
         // Run the setup
         setupBusRoutes();
         "#;
-        
+
         // Execute the JS code to get bus routes data
         let bus_routes_promise = Promise::new(&mut |resolve, reject| {
             let run_js = format!(
@@ -351,26 +370,31 @@ impl TflMapIntegration {
                 setupBusRoutes().then(resolve).catch(reject);
                 "#
             );
-            
+
             if let Err(e) = js_sys::eval(&run_js) {
-                reject.call1(&JsValue::NULL, &JsValue::from_str(&format!("Failed to setup bus routes: {:?}", e))).unwrap();
+                reject
+                    .call1(
+                        &JsValue::NULL,
+                        &JsValue::from_str(&format!("Failed to setup bus routes: {:?}", e)),
+                    )
+                    .unwrap();
             }
         });
-        
+
         // Function to wait for promise and add layers
         let wait_for_promise = format!(
             r#"
             async function addBusRoutesToMap() {{
                 try {{
                     const geojson = await arguments[0];
-                    
+
                     // Add source if it doesn't exist
                     if (!window.mapInstance.getSource('{}')) {{
                         window.mapInstance.addSource('{}', {{
                             type: 'geojson',
                             data: geojson
                         }});
-                        
+
                         // Add bus routes layer
                         window.mapInstance.addLayer({{
                             id: '{}-layer',
@@ -387,40 +411,45 @@ impl TflMapIntegration {
                                 'line-opacity': 0.7
                             }}
                         }});
-                        
+
                         console.log('Added bus routes to map');
                     }}
-                    
+
                     return true;
                 }} catch (err) {{
                     console.error('Error adding bus routes to map:', err);
                     throw err;
                 }}
             }}
-            
+
             addBusRoutesToMap();
             "#,
-            self.bus_routes_source_id, self.bus_routes_source_id,
-            self.bus_routes_source_id, self.bus_routes_source_id
+            self.bus_routes_source_id,
+            self.bus_routes_source_id,
+            self.bus_routes_source_id,
+            self.bus_routes_source_id
         );
-        
+
         // Execute the wait function
         let result = Function::new_with_args("busRoutes", &wait_for_promise)
             .call1(&JsValue::NULL, &bus_routes_promise)?;
-        
+
         // Check if we got an error
         if result.is_instance_of::<js_sys::Error>() {
-            return Err(JsValue::from_str(&format!("Error setting up bus routes: {:?}", result)));
+            return Err(JsValue::from_str(&format!(
+                "Error setting up bus routes: {:?}",
+                result
+            )));
         }
-        
+
         console::log_1(&"Bus routes setup successfully".into());
         Ok(())
     }
-    
+
     // Setup stations visualization
     fn setup_stations(&self, map: &Map) -> Result<(), JsValue> {
         console::log_1(&"Setting up stations...".into());
-        
+
         // Function to process stations data
         let js_code = r#"
         async function setupStations() {
@@ -428,52 +457,52 @@ impl TflMapIntegration {
                 // Load both TSV files
                 const tubeContent = await window.fs.readFile('tube_routes.tsv', { encoding: 'utf8' });
                 const busContent = await window.fs.readFile('bus_routes.tsv', { encoding: 'utf8' });
-                
+
                 // Parse tube TSV
                 const tubeLines = tubeContent.split('\n');
                 const tubeHeaders = tubeLines[0].split('\t');
-                
+
                 const tubeRoutes = [];
                 for (let i = 1; i < tubeLines.length; i++) {
                     if (!tubeLines[i].trim()) continue;
-                    
+
                     const fields = tubeLines[i].split('\t');
                     const record = {};
-                    
+
                     for (let j = 0; j < tubeHeaders.length; j++) {
                         record[tubeHeaders[j]] = fields[j];
                     }
-                    
+
                     tubeRoutes.push(record);
                 }
-                
+
                 // Parse bus TSV
                 const busLines = busContent.split('\n');
                 const busHeaders = busLines[0].split('\t');
-                
+
                 const busRoutes = [];
                 for (let i = 1; i < busLines.length; i++) {
                     if (!busLines[i].trim()) continue;
-                    
+
                     const fields = busLines[i].split('\t');
                     const record = {};
-                    
+
                     for (let j = 0; j < busHeaders.length; j++) {
                         record[busHeaders[j]] = fields[j];
                     }
-                    
+
                     busRoutes.push(record);
                 }
-                
+
                 // Collect all stations
                 const stationsMap = new Map();
-                
+
                 // Add tube stations
                 tubeRoutes.forEach(route => {
                     // Add start terminus
                     const startCoords = route['Start Coordinates'].split(',').map(c => parseFloat(c));
                     const startName = route['Start Terminus'];
-                    
+
                     if (!stationsMap.has(startName)) {
                         stationsMap.set(startName, {
                             name: startName,
@@ -489,11 +518,11 @@ impl TflMapIntegration {
                             station.tubeLines.push(route['Tube Line']);
                         }
                     }
-                    
+
                     // Add end terminus
                     const endCoords = route['End Coordinates'].split(',').map(c => parseFloat(c));
                     const endName = route['End Terminus'];
-                    
+
                     if (!stationsMap.has(endName)) {
                         stationsMap.set(endName, {
                             name: endName,
@@ -510,13 +539,13 @@ impl TflMapIntegration {
                         }
                     }
                 });
-                
+
                 // Add bus stations
                 busRoutes.forEach(route => {
                     // Add start terminus
                     const startCoords = route['Start Coordinates'].split(',').map(c => parseFloat(c));
                     const startName = route['Start Terminus'];
-                    
+
                     if (!stationsMap.has(startName)) {
                         stationsMap.set(startName, {
                             name: startName,
@@ -532,11 +561,11 @@ impl TflMapIntegration {
                             station.busRoutes.push(route['Route Number']);
                         }
                     }
-                    
+
                     // Add end terminus
                     const endCoords = route['End Coordinates'].split(',').map(c => parseFloat(c));
                     const endName = route['End Terminus'];
-                    
+
                     if (!stationsMap.has(endName)) {
                         stationsMap.set(endName, {
                             name: endName,
@@ -553,18 +582,18 @@ impl TflMapIntegration {
                         }
                     }
                 });
-                
+
                 // Identify interchanges
                 stationsMap.forEach((station, name) => {
                     const totalRoutes = station.tubeLines.length + station.busRoutes.length;
                     station.isInterchange = totalRoutes > 1;
-                    
+
                     // If a station serves both tube and bus, mark as interchange
                     if (station.tubeLines.length > 0 && station.busRoutes.length > 0) {
                         station.stationType = 'interchange';
                     }
                 });
-                
+
                 // Create GeoJSON features
                 const features = Array.from(stationsMap.values()).map(station => {
                     return {
@@ -583,7 +612,7 @@ impl TflMapIntegration {
                         }
                     };
                 });
-                
+
                 // Return the GeoJSON
                 return {
                     type: 'FeatureCollection',
@@ -594,11 +623,11 @@ impl TflMapIntegration {
                 throw err;
             }
         }
-        
+
         // Run the setup
         setupStations();
         "#;
-        
+
         // Execute the JS code to get stations data
         let stations_promise = Promise::new(&mut |resolve, reject| {
             let run_js = format!(
@@ -607,26 +636,31 @@ impl TflMapIntegration {
                 setupStations().then(resolve).catch(reject);
                 "#
             );
-            
+
             if let Err(e) = js_sys::eval(&run_js) {
-                reject.call1(&JsValue::NULL, &JsValue::from_str(&format!("Failed to setup stations: {:?}", e))).unwrap();
+                reject
+                    .call1(
+                        &JsValue::NULL,
+                        &JsValue::from_str(&format!("Failed to setup stations: {:?}", e)),
+                    )
+                    .unwrap();
             }
         });
-        
+
         // Function to wait for promise and add layers
         let wait_for_promise = format!(
             r#"
             async function addStationsToMap() {{
                 try {{
                     const geojson = await arguments[0];
-                    
+
                     // Add source if it doesn't exist
                     if (!window.mapInstance.getSource('{}')) {{
                         window.mapInstance.addSource('{}', {{
                             type: 'geojson',
                             data: geojson
                         }});
-                        
+
                         // Add stations layer
                         window.mapInstance.addLayer({{
                             id: '{}-layer',
@@ -649,7 +683,7 @@ impl TflMapIntegration {
                                 'circle-stroke-width': 2
                             }}
                         }});
-                        
+
                         // Add station labels layer (only for interchanges)
                         window.mapInstance.addLayer({{
                             id: '{}-labels',
@@ -669,41 +703,47 @@ impl TflMapIntegration {
                                 'text-halo-width': 2
                             }}
                         }});
-                        
+
                         console.log('Added stations to map');
                     }}
-                    
+
                     return true;
                 }} catch (err) {{
                     console.error('Error adding stations to map:', err);
                     throw err;
                 }}
             }}
-            
+
             addStationsToMap();
             "#,
-            self.stations_source_id, self.stations_source_id,
-            self.stations_source_id, self.stations_source_id,
-            self.stations_source_id, self.stations_source_id
+            self.stations_source_id,
+            self.stations_source_id,
+            self.stations_source_id,
+            self.stations_source_id,
+            self.stations_source_id,
+            self.stations_source_id
         );
-        
+
         // Execute the wait function
         let result = Function::new_with_args("stations", &wait_for_promise)
             .call1(&JsValue::NULL, &stations_promise)?;
-        
+
         // Check if we got an error
         if result.is_instance_of::<js_sys::Error>() {
-            return Err(JsValue::from_str(&format!("Error setting up stations: {:?}", result)));
+            return Err(JsValue::from_str(&format!(
+                "Error setting up stations: {:?}",
+                result
+            )));
         }
-        
+
         console::log_1(&"Stations setup successfully".into());
         Ok(())
     }
-    
+
     // Setup vehicle simulation
     fn setup_simulation(&mut self, map: &Map) -> Result<(), JsValue> {
         console::log_1(&"Setting up vehicle simulation...".into());
-        
+
         // Add empty vehicles source and layers
         let js_code = format!(
             r#"
@@ -718,7 +758,7 @@ impl TflMapIntegration {
                                 features: []
                             }}
                         }});
-                        
+
                         // Add buses layer
                         window.mapInstance.addLayer({{
                             id: 'buses-layer',
@@ -732,7 +772,7 @@ impl TflMapIntegration {
                                 'circle-stroke-width': 2
                             }}
                         }});
-                        
+
                         // Add trains layer
                         window.mapInstance.addLayer({{
                             id: 'trains-layer',
@@ -746,20 +786,20 @@ impl TflMapIntegration {
                                 'circle-stroke-width': 2
                             }}
                         }});
-                        
+
                         console.log('Added vehicle simulation layers');
-                        
+
                         // Initialize simulation controller
                         setupSimulationController();
                     }}
-                    
+
                     return true;
                 }} catch (err) {{
                     console.error('Error setting up vehicle simulation:', err);
                     throw err;
                 }}
             }}
-            
+
             // Setup the simulation controller
             function setupSimulationController() {{
                 window.SimulationController = {{
@@ -767,39 +807,39 @@ impl TflMapIntegration {
                     isRunning: false,
                     animationFrameId: null,
                     simSpeed: 0.005, // Default speed
-                    
+
                     initialize: function() {{
                         console.log('Initializing simulation controller');
                         this.createVehicles();
                         this.start();
                     }},
-                    
+
                     createVehicles: function() {{
                         // Get all tube lines and bus routes
                         const tubeSource = window.mapInstance.getSource('{}');
                         const busSource = window.mapInstance.getSource('{}');
-                        
+
                         if (!tubeSource || !busSource) {{
                             console.error('Cannot create vehicles: sources not found');
                             return;
                         }}
-                        
+
                         // Get the data from sources
                         const tubeData = tubeSource._data;
                         const busData = busSource._data;
-                        
+
                         // Create vehicles
                         const vehicles = [];
-                        
+
                         // Create trains for tube lines
                         if (tubeData && tubeData.features) {{
                             tubeData.features.forEach((feature, index) => {{
                                 // Create 3-5 trains per line
                                 const trainCount = 3 + Math.floor(Math.random() * 3);
-                                
+
                                 for (let i = 0; i < trainCount; i++) {{
                                     const coords = feature.geometry.coordinates;
-                                    
+
                                     // Only create if we have valid coordinates
                                     if (coords && coords.length >= 2) {{
                                         // Random position along the line
@@ -809,7 +849,7 @@ impl TflMapIntegration {
                                             coords[1],
                                             progress
                                         );
-                                        
+
                                         vehicles.push({{
                                             id: vehicles.length,
                                             vehicleType: 'Train',
@@ -825,16 +865,16 @@ impl TflMapIntegration {
                                 }}
                             }});
                         }}
-                        
+
                         // Create buses for bus routes
                         if (busData && busData.features) {{
                             busData.features.forEach((feature, index) => {{
                                 // Create 1-2 buses per route
                                 const busCount = 1 + Math.floor(Math.random() * 2);
-                                
+
                                 for (let i = 0; i < busCount; i++) {{
                                     const coords = feature.geometry.coordinates;
-                                    
+
                                     // Only create if we have valid coordinates
                                     if (coords && coords.length >= 2) {{
                                         // Random position along the route
@@ -844,7 +884,7 @@ impl TflMapIntegration {
                                             coords[1],
                                             progress
                                         );
-                                        
+
                                         vehicles.push({{
                                             id: vehicles.length,
                                             vehicleType: 'Bus',
@@ -860,27 +900,27 @@ impl TflMapIntegration {
                                 }}
                             }});
                         }}
-                        
+
                         this.vehicles = vehicles;
                         console.log(`Created ${{vehicles.length}} vehicles for simulation`);
                     }},
-                    
+
                     start: function() {{
                         console.log('Starting simulation');
                         this.isRunning = true;
                         this.updateVehicles();
                     }},
-                    
+
                     pause: function() {{
                         console.log('Pausing simulation');
                         this.isRunning = false;
-                        
+
                         if (this.animationFrameId) {{
                             cancelAnimationFrame(this.animationFrameId);
                             this.animationFrameId = null;
                         }}
                     }},
-                    
+
                     toggle: function() {{
                         if (this.isRunning) {{
                             this.pause();
@@ -888,11 +928,11 @@ impl TflMapIntegration {
                             this.start();
                         }}
                     }},
-                    
+
                     reset: function() {{
                         console.log('Resetting simulation');
                         this.pause();
-                        
+
                         // Reset all vehicles to random starting positions
                         this.vehicles.forEach(vehicle => {{
                             vehicle.progress = Math.random();
@@ -903,14 +943,14 @@ impl TflMapIntegration {
                             );
                             vehicle.direction = Math.random() > 0.5 ? 1 : -1;
                         }});
-                        
+
                         // Update the map
                         this.updateVehiclePositions();
-                        
+
                         // Restart
                         this.start();
                     }},
-                    
+
                     setSpeed: function(speed) {{
                         // speed should be between 0 and 1
                         const normalizedSpeed = Math.min(Math.max(speed, 0), 1);
@@ -918,15 +958,15 @@ impl TflMapIntegration {
                         this.simSpeed = 0.001 + (normalizedSpeed * 0.009);
                         console.log(`Set simulation speed to ${{this.simSpeed}}`);
                     }},
-                    
+
                     updateVehicles: function() {{
                         if (!this.isRunning) return;
-                        
+
                         // Update positions
                         this.vehicles.forEach(vehicle => {{
                             // Update progress based on speed and direction
                             vehicle.progress += vehicle.speed * vehicle.direction * (this.simSpeed / 0.005);
-                            
+
                             // Check if we've reached the end
                             if (vehicle.progress >= 1.0) {{
                                 vehicle.progress = 1.0;
@@ -935,7 +975,7 @@ impl TflMapIntegration {
                                 vehicle.progress = 0.0;
                                 vehicle.direction = 1;
                             }}
-                            
+
                             // Update position
                             vehicle.position = this.interpolatePosition(
                                 vehicle.startPosition,
@@ -943,14 +983,14 @@ impl TflMapIntegration {
                                 vehicle.progress
                             );
                         }});
-                        
+
                         // Update the map
                         this.updateVehiclePositions();
-                        
+
                         // Request next frame
                         this.animationFrameId = requestAnimationFrame(() => this.updateVehicles());
                     }},
-                    
+
                     updateVehiclePositions: function() {{
                         // Create GeoJSON for vehicles
                         const features = this.vehicles.map(vehicle => {{
@@ -967,7 +1007,7 @@ impl TflMapIntegration {
                                 }}
                             }};
                         }});
-                        
+
                         // Update the source
                         const source = window.mapInstance.getSource('{}');
                         if (source) {{
@@ -977,31 +1017,31 @@ impl TflMapIntegration {
                             }});
                         }}
                     }},
-                    
+
                     interpolatePosition: function(start, end, progress) {{
                         const lng = start[0] + (end[0] - start[0]) * progress;
                         const lat = start[1] + (end[1] - start[1]) * progress;
                         return [lng, lat];
                     }}
                 }};
-                
+
                 console.log('Simulation controller setup complete');
             }}
-            
+
             setupVehicleSimulation();
             "#,
             self.vehicles_source_id,
-            self.vehicles_source_id, 
+            self.vehicles_source_id,
             self.vehicles_source_id,
             self.vehicles_source_id,
             self.tube_lines_source_id,
             self.bus_routes_source_id,
             self.vehicles_source_id
         );
-        
+
         // Execute the JS code to set up simulation
         let result = js_sys::eval(&js_code)?;
-        
+
         // Add global functions to control the simulation
         let control_js = r#"
             // Global functions to control the simulation
@@ -1011,37 +1051,37 @@ impl TflMapIntegration {
                     window.SimulationController.toggle();
                 }}
             }};
-            
+
             window.rust_reset_simulation = function() {
                 console.log('Reset simulation called from Rust');
                 if (window.SimulationController) {
                     window.SimulationController.reset();
                 }}
             }};
-            
+
             window.rust_set_simulation_speed = function(speed) {
                 console.log('Set simulation speed called from Rust:', speed);
                 if (window.SimulationController) {
                     window.SimulationController.setSpeed(speed);
                 }}
             }};
-            
+
             // Initialize the simulation if automatic start is enabled
             if (window.SimulationController && !window.SimulationController.vehicles.length) {
                 window.SimulationController.initialize();
             }}
         "#;
-        
+
         js_sys::eval(control_js)?;
-        
+
         console::log_1(&"Vehicle simulation setup successfully".into());
         Ok(())
     }
-    
+
     // Toggle simulation on/off
     pub fn toggle_simulation(&mut self) -> Result<(), JsValue> {
         console::log_1(&"Toggling TfL simulation...".into());
-        
+
         let js_code = r#"
             if (window.SimulationController) {
                 window.SimulationController.toggle();
@@ -1049,21 +1089,27 @@ impl TflMapIntegration {
             }}
             return false;
         "#;
-        
+
         let result = js_sys::eval(js_code)?;
-        
+
         if let Some(is_running) = result.as_bool() {
             self.simulation_active = is_running;
-            console::log_1(&format!("Simulation is now {}", if is_running { "running" } else { "paused" }).into());
+            console::log_1(
+                &format!(
+                    "Simulation is now {}",
+                    if is_running { "running" } else { "paused" }
+                )
+                .into(),
+            );
         }
-        
+
         Ok(())
     }
-    
+
     // Reset simulation
     pub fn reset_simulation(&mut self) -> Result<(), JsValue> {
         console::log_1(&"Resetting TfL simulation...".into());
-        
+
         let js_code = r#"
             if (window.SimulationController) {
                 window.SimulationController.reset();
@@ -1071,16 +1117,16 @@ impl TflMapIntegration {
             }}
             return false;
         "#;
-        
+
         js_sys::eval(js_code)?;
-        
+
         Ok(())
     }
-    
+
     // Set simulation speed
     pub fn set_simulation_speed(&mut self, speed: f64) -> Result<(), JsValue> {
         console::log_1(&format!("Setting TfL simulation speed to {}", speed).into());
-        
+
         let js_code = format!(
             r#"
             if (window.SimulationController) {{
@@ -1091,22 +1137,22 @@ impl TflMapIntegration {
             "#,
             speed
         );
-        
+
         js_sys::eval(&js_code)?;
-        
+
         Ok(())
     }
-    
+
     // Update layer visibility
     pub fn update_layer_visibility(&self, layers: &crate::app::TflLayers) -> Result<(), JsValue> {
         console::log_1(&"Updating TfL layer visibility...".into());
-        
+
         let js_code = format!(
             r#"
             function updateTflLayers() {{
                 const map = window.mapInstance;
                 if (!map) return false;
-                
+
                 // Tube lines visibility
                 if (map.getLayer('{}-layer')) {{
                     map.setLayoutProperty(
@@ -1115,7 +1161,7 @@ impl TflMapIntegration {
                         {} ? 'visible' : 'none'
                     );
                 }}
-                
+
                 // Bus routes visibility
                 if (map.getLayer('{}-layer')) {{
                     map.setLayoutProperty(
@@ -1124,7 +1170,7 @@ impl TflMapIntegration {
                         {} ? 'visible' : 'none'
                     );
                 }}
-                
+
                 // Stations visibility
                 if (map.getLayer('{}-layer')) {{
                     map.setLayoutProperty(
@@ -1133,7 +1179,7 @@ impl TflMapIntegration {
                         {} ? 'visible' : 'none'
                     );
                 }}
-                
+
                 // Station labels visibility (interchanges only or all stations)
                 if (map.getLayer('{}-labels')) {{
                     // First set visibility based on stations toggle
@@ -1142,7 +1188,7 @@ impl TflMapIntegration {
                         'visibility',
                         {} ? 'visible' : 'none'
                     );
-                    
+
                     // Then update the filter based on show_all_stations toggle
                     if ({}) {{
                         // Show all station labels
@@ -1152,7 +1198,7 @@ impl TflMapIntegration {
                         map.setFilter('{}-labels', ['==', ['get', 'isInterchange'], true]);
                     }}
                 }}
-                
+
                 // Vehicle simulation layers
                 if (map.getLayer('buses-layer')) {{
                     map.setLayoutProperty(
@@ -1161,7 +1207,7 @@ impl TflMapIntegration {
                         ({} && {}) ? 'visible' : 'none'
                     );
                 }}
-                
+
                 if (map.getLayer('trains-layer')) {{
                     map.setLayoutProperty(
                         'trains-layer',
@@ -1169,24 +1215,35 @@ impl TflMapIntegration {
                         ({} && {}) ? 'visible' : 'none'
                     );
                 }}
-                
+
                 return true;
             }}
-            
+
             updateTflLayers();
             "#,
-            self.tube_lines_source_id, self.tube_lines_source_id, layers.tube,
-            self.bus_routes_source_id, self.bus_routes_source_id, layers.buses,
-            self.stations_source_id, self.stations_source_id, layers.stations,
-            self.stations_source_id, self.stations_source_id, layers.stations,
+            self.tube_lines_source_id,
+            self.tube_lines_source_id,
+            layers.tube,
+            self.bus_routes_source_id,
+            self.bus_routes_source_id,
+            layers.buses,
+            self.stations_source_id,
+            self.stations_source_id,
+            layers.stations,
+            self.stations_source_id,
+            self.stations_source_id,
+            layers.stations,
             layers.show_all_stations,
-            self.stations_source_id, self.stations_source_id,
-            layers.buses, layers.simulation,
-            layers.tube, layers.simulation
+            self.stations_source_id,
+            self.stations_source_id,
+            layers.buses,
+            layers.simulation,
+            layers.tube,
+            layers.simulation
         );
-        
+
         js_sys::eval(&js_code)?;
-        
+
         console::log_1(&"TfL layer visibility updated".into());
         Ok(())
     }
