@@ -1,27 +1,18 @@
 use crate::utils::log::{self, LogCategory, with_context};
 use dioxus::prelude::*;
 use js_sys::{Array, Math, Object, Reflect};
-use std::cell::RefCell;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;
 
-// Import from our model module
+// Import from our modules
 mod model;
+mod state;
+
 use model::{Route, Vehicle, VehicleType, build_sample_routes, initialize_vehicles};
-
-// Core shared state that contains all vehicles
-#[derive(Default)]
-pub struct SimulationState {
-    vehicles: Vec<Vehicle>,
-    routes: Vec<Route>,
-    is_paused: bool,
-    animation_frame_id: Option<i32>,
-}
-
-// We'll use thread_local for our global state
-thread_local! {
-    static SIMULATION_STATE: RefCell<SimulationState> = RefCell::new(SimulationState::default());
-}
+use state::{
+    SimulationState, debug_simulation_state, get_animation_frame_id, initialize_state,
+    set_animation_frame_id, toggle_pause, with_simulation_state, with_simulation_state_ref,
+};
 
 // MapLibre integration components
 // ------------------------------
@@ -120,12 +111,7 @@ fn initialize_simulation() {
         let vehicles = initialize_vehicles(&routes);
 
         // Store in global state
-        SIMULATION_STATE.with(|state| {
-            let mut sim_state = state.borrow_mut();
-            sim_state.routes = routes;
-            sim_state.vehicles = vehicles;
-            sim_state.is_paused = false;
-        });
+        initialize_state(routes, vehicles);
 
         // Register with MapLibre and start animation
         register_vehicle_layers();
@@ -214,14 +200,13 @@ fn start_animation_loop() {
         // Create a callback that will run on each animation frame
         let animation_callback = Closure::wrap(Box::new(move || {
             // Only update if not paused
-            let should_continue = SIMULATION_STATE.with(|state| {
-                let mut sim_state = state.borrow_mut();
+            let should_continue = with_simulation_state(|sim_state| {
                 if !sim_state.is_paused {
                     // 1. Update vehicle positions
-                    update_vehicle_positions(&mut sim_state);
+                    update_vehicle_positions(sim_state);
 
                     // 2. Update MapLibre with new positions
-                    update_maplibre_vehicles(&sim_state);
+                    update_maplibre_vehicles(sim_state);
                 }
 
                 // Return whether we're paused to determine if we should request another frame
@@ -239,10 +224,7 @@ fn start_animation_loop() {
             match window.request_animation_frame(animation_callback.as_ref().unchecked_ref()) {
                 Ok(id) => {
                     // Store the callback and frame ID
-                    SIMULATION_STATE.with(|state| {
-                        let mut sim_state = state.borrow_mut();
-                        sim_state.animation_frame_id = Some(id);
-                    });
+                    set_animation_frame_id(id);
 
                     logger.debug(&format!("Animation frame requested, ID: {}", id));
 
@@ -262,14 +244,13 @@ fn start_animation_loop() {
 /// Request a new animation frame
 fn request_animation_frame() {
     let animation_callback = Closure::wrap(Box::new(move || {
-        let should_continue = SIMULATION_STATE.with(|state| {
-            let mut sim_state = state.borrow_mut();
+        let should_continue = with_simulation_state(|sim_state| {
             if !sim_state.is_paused {
                 // Update vehicle positions
-                update_vehicle_positions(&mut sim_state);
+                update_vehicle_positions(sim_state);
 
                 // Update MapLibre with new positions
-                update_maplibre_vehicles(&sim_state);
+                update_maplibre_vehicles(sim_state);
             }
 
             // Return whether we're paused to determine if we should request another frame
@@ -287,10 +268,7 @@ fn request_animation_frame() {
         match window.request_animation_frame(animation_callback.as_ref().unchecked_ref()) {
             Ok(id) => {
                 // Store the animation frame ID
-                SIMULATION_STATE.with(|state| {
-                    let mut sim_state = state.borrow_mut();
-                    sim_state.animation_frame_id = Some(id);
-                });
+                set_animation_frame_id(id);
 
                 // Forget the closure to keep it alive
                 animation_callback.forget();
@@ -495,11 +473,7 @@ fn serialize_geojson_data(geojson: &Object) -> String {
 /// Toggle the simulation pause state
 fn toggle_simulation() {
     with_context("toggle_simulation", LogCategory::Simulation, |logger| {
-        let is_now_paused = SIMULATION_STATE.with(|state| {
-            let mut sim_state = state.borrow_mut();
-            sim_state.is_paused = !sim_state.is_paused;
-            sim_state.is_paused
-        });
+        let is_now_paused = toggle_pause();
 
         // If we're resuming, restart the animation loop
         if !is_now_paused {
@@ -517,18 +491,15 @@ fn reset_simulation() {
         logger.info("Resetting simulation...");
 
         // Cancel current animation frame if one is active
-        SIMULATION_STATE.with(|state| {
-            let sim_state = state.borrow();
-            if let Some(id) = sim_state.animation_frame_id {
-                if let Some(window) = window() {
-                    if let Err(err) = window.cancel_animation_frame(id) {
-                        logger.error(&format!("Failed to cancel animation frame: {:?}", err));
-                    } else {
-                        logger.debug(&format!("Canceled animation frame ID: {}", id));
-                    }
+        if let Some(id) = get_animation_frame_id() {
+            if let Some(window) = window() {
+                if let Err(err) = window.cancel_animation_frame(id) {
+                    logger.error(&format!("Failed to cancel animation frame: {:?}", err));
+                } else {
+                    logger.debug(&format!("Canceled animation frame ID: {}", id));
                 }
             }
-        });
+        }
 
         // Reset state and recreate everything
         logger.debug("Re-initializing simulation from scratch");
@@ -538,70 +509,4 @@ fn reset_simulation() {
     })
 }
 
-/// Debug function to log important simulation state
-fn debug_simulation_state(sim_state: &SimulationState) {
-    // Only log periodically to avoid console spam
-    static mut COUNTER: u32 = 0;
-    unsafe {
-        COUNTER += 1;
-        if COUNTER % 60 != 0 {
-            // Log every ~60 frames (roughly 1 second)
-            return;
-        }
-    }
-
-    with_context(
-        "debug_simulation_state",
-        LogCategory::Simulation,
-        |logger| {
-            // Log general state
-            logger.debug(&format!(
-                "Simulation state: {} vehicles, paused: {}",
-                sim_state.vehicles.len(),
-                sim_state.is_paused
-            ));
-
-            // Log a sample vehicle
-            if !sim_state.vehicles.is_empty() {
-                let sample = &sim_state.vehicles[0];
-                logger.debug(&format!(
-                    "Sample vehicle: id={}, type={:?}, pos=({:.4}, {:.4})",
-                    sample.id, sample.vehicle_type, sample.lng, sample.lat
-                ));
-            }
-
-            // Check if vehicles source exists and log its state
-            let js_code = r#"
-        let result = "unknown";
-        if (window.mapInstance) {
-            const source = window.mapInstance.getSource('vehicles-source');
-            if (source) {
-                try {
-                    const data = source._data;
-                    const features = data.features || [];
-                    result = `Source exists, ${features.length} features`;
-                } catch (e) {
-                    result = `Source exists but error: ${e.message}`;
-                }
-            } else {
-                result = "Source does not exist";
-            }
-        } else {
-            result = "Map instance not found";
-        }
-        result;
-        "#;
-
-            match js_sys::eval(js_code) {
-                Ok(result) => {
-                    if let Some(result_str) = result.as_string() {
-                        logger.debug(&format!("Vehicles source check: {}", result_str));
-                    }
-                }
-                Err(err) => {
-                    logger.error(&format!("Failed to check vehicles source: {:?}", err));
-                }
-            }
-        },
-    )
-}
+// The debug_simulation_state function has been moved to the state module
