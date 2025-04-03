@@ -7,7 +7,7 @@ use web_sys::window;
 
 // Import from our model module
 mod model;
-use model::{VehicleType, Vehicle, Route, build_sample_routes, initialize_vehicles};
+use model::{Route, Vehicle, VehicleType, build_sample_routes, initialize_vehicles};
 
 // Core shared state that contains all vehicles
 #[derive(Default)]
