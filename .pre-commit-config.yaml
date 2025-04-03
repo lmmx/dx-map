@@ -3,6 +3,7 @@ fail_fast: true
 exclude: |
   (?x)^(
     .*/(target)/.*|
+    .*\.lock|
   )$
 
 ci:
