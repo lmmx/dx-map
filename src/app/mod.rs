@@ -1,3 +1,7 @@
+//! # Application Module
+//!
+//! Main application components for the TfL Simulation.
+
 use dioxus::prelude::*;
 
 mod canvas;
@@ -6,6 +10,7 @@ mod layer_panel;
 mod simulation; // New module for vehicle simulation
 
 use crate::maplibre::helpers;
+use crate::utils::log::{self, LogCategory, with_context};
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
@@ -18,19 +23,31 @@ const TFL_CSS: Asset = asset!("/assets/tfl.css");
 const KEY_CSS: Asset = asset!("/assets/key.css");
 const LAYER_CSS: Asset = asset!("/assets/layerswitcher.css");
 
-// Model to track layer visibility
+/// Model to track layer visibility.
+///
+/// This structure tracks which layers are visible in the TfL network map.
 #[derive(Clone, Copy, PartialEq)]
 pub struct TflLayers {
+    /// Underground/tube lines
     pub tube: bool,
+    /// Overground rail services
     pub overground: bool,
+    /// Docklands Light Railway
     pub dlr: bool,
+    /// Elizabeth Line (Crossrail)
     pub elizabeth_line: bool,
+    /// Bus routes
     pub buses: bool,
+    /// Tram services
     pub trams: bool,
+    /// Emirates Air Line cable car
     pub cable_car: bool,
+    /// Station markers
     pub stations: bool,
+    /// Depot locations
     pub depots: bool,
-    pub simulation: bool, // New field for simulation visibility
+    /// Vehicle simulation
+    pub simulation: bool,
 }
 
 impl Default for TflLayers {
@@ -45,11 +62,14 @@ impl Default for TflLayers {
             cable_car: true,
             stations: true,
             depots: false,
-            simulation: false, // Show simulation by default
+            simulation: false, // Simulation disabled by default
         }
     }
 }
 
+/// Main application component.
+///
+/// This is the root component of the TfL Simulation application.
 #[component]
 pub fn app() -> Element {
     let mut show_layers_panel = use_signal(|| false);
@@ -59,104 +79,120 @@ pub fn app() -> Element {
 
     // Initialize simulation JS when app loads
     use_effect(move || {
-        let controller_script = format!(
-            r#"
-	// Global simulation controller
-	const SimulationController = {{
-	  initialized: false,
-	  running: false,
+        with_context("app::simulation_init", LogCategory::App, |logger| {
+            logger.info("Initializing simulation controller script");
 
-	  initialize: function() {{
-	    console.log("SimulationController.initialize() called");
-	    if (this.initialized) {{
-	      console.log("Simulation already initialized, skipping");
-	      return;
-	    }}
+            let controller_script = format!(
+                r#"
+    // Global simulation controller
+    const SimulationController = {{
+      initialized: false,
+      running: false,
 
-	    // Call the Rust initialization function
-	    if (typeof window.rust_initialize_simulation === 'function') {{
-	      console.log("Calling rust_initialize_simulation()");
-	      window.rust_initialize_simulation();
-	      this.initialized = true;
-	      this.running = true;
-	    }} else {{
-	      console.error("rust_initialize_simulation function not found");
-	    }}
-	  }},
-
-	  toggle: function() {{
-	    console.log("SimulationController.toggle() called");
-	    if (!this.initialized) {{
-	      this.initialize();
-	      return;
-	    }}
-
-	    if (typeof window.rust_toggle_simulation === 'function') {{
-	      window.rust_toggle_simulation();
-	      this.running = !this.running;
-	      console.log("Simulation running:", this.running);
-	    }}
-	  }},
-
-	  reset: function() {{
-	    console.log("SimulationController.reset() called");
-	    if (typeof window.rust_reset_simulation === 'function') {{
-	      window.rust_reset_simulation();
-	      this.running = true;
-	      console.log("Simulation reset and running");
-	    }}
-	  }}
-	}};
-
-	// Make it globally available
-	window.SimulationController = SimulationController;
-
-        // Only initialize automatically if simulation is enabled
-        const simulationEnabled = {0};
-
-        if (simulationEnabled) {{
-	  // Initialize when map is ready
-	  if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
-	    setTimeout(function() {{
-	      SimulationController.initialize();
-	    }}, 1000);
-	  }} else {{
-	    const initInterval = setInterval(function() {{
-	      if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
-	        clearInterval(initInterval);
-	        setTimeout(function() {{
-	  	SimulationController.initialize();
-	        }}, 1000);
-	      }}
-	    }}, 1000);
-	  }}
-        }} else {{
-          console.log("Automatic simulation initialization disabled");
+      initialize: function() {{
+        console.log("SimulationController.initialize() called");
+        if (this.initialized) {{
+          console.log("Simulation already initialized, skipping");
+          return;
         }}
-	"#,
-            layers.read().simulation
-        );
-        if let Err(e) = helpers::add_inline_script(&controller_script) {
-            web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
-        } else {
-            web_sys::console::log_1(&"Simulation controller script added".into());
-        }
+
+        // Call the Rust initialization function
+        if (typeof window.rust_initialize_simulation === 'function') {{
+          console.log("Calling rust_initialize_simulation()");
+          window.rust_initialize_simulation();
+          this.initialized = true;
+          this.running = true;
+        }} else {{
+          console.error("rust_initialize_simulation function not found");
+        }}
+      }},
+
+      toggle: function() {{
+        console.log("SimulationController.toggle() called");
+        if (!this.initialized) {{
+          this.initialize();
+          return;
+        }}
+
+        if (typeof window.rust_toggle_simulation === 'function') {{
+          window.rust_toggle_simulation();
+          this.running = !this.running;
+          console.log("Simulation running:", this.running);
+        }}
+      }},
+
+      reset: function() {{
+        console.log("SimulationController.reset() called");
+        if (typeof window.rust_reset_simulation === 'function') {{
+          window.rust_reset_simulation();
+          this.running = true;
+          console.log("Simulation reset and running");
+        }}
+      }}
+    }};
+
+    // Make it globally available
+    window.SimulationController = SimulationController;
+
+    // Only initialize automatically if simulation is enabled
+    const simulationEnabled = {0};
+
+    if (simulationEnabled) {{
+      // Initialize when map is ready
+      if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
+        setTimeout(function() {{
+          SimulationController.initialize();
+        }}, 1000);
+      }} else {{
+        const initInterval = setInterval(function() {{
+          if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
+            clearInterval(initInterval);
+            setTimeout(function() {{
+              SimulationController.initialize();
+            }}, 1000);
+          }}
+        }}, 1000);
+      }}
+    }} else {{
+      console.log("Automatic simulation initialization disabled");
+    }}
+    "#,
+                layers.read().simulation
+            );
+
+            if let Err(e) = helpers::add_inline_script(&controller_script) {
+                logger.error(&format!("Failed to add simulation script: {:?}", e));
+            } else {
+                logger.info("Simulation controller script added successfully");
+            }
+        })
     });
 
     use_effect(move || {
-        // Try to expose simulation functions if available
-        if let Ok(_) = simulation::expose_simulation_functions() {
-            web_sys::console::log_1(&"Simulation functions exposed on app start".into());
-        }
+        with_context("app::simulation_functions", LogCategory::App, |logger| {
+            logger.info("Exposing simulation functions");
 
-        // Add the controller script
-        let controller_script = r#"
-	// SimulationController code here...
-	"#;
+            // Try to expose simulation functions if available
+            match simulation::expose_simulation_functions() {
+                Ok(_) => {
+                    logger.info("Simulation functions exposed successfully");
+                }
+                Err(err) => {
+                    logger.error(&format!("Failed to expose simulation functions: {:?}", err));
+                }
+            }
 
-        if let Err(e) = helpers::add_inline_script(controller_script) {
-            web_sys::console::error_1(&format!("Failed to add simulation script: {:?}", e).into());
-        }
+            // Add the controller script
+            let controller_script = r#"
+    // SimulationController code here...
+    "#;
+
+            if let Err(e) = helpers::add_inline_script(controller_script) {
+                logger.error(&format!("Failed to add simulation script: {:?}", e));
+            } else {
+                logger.debug("Additional controller script added");
+            }
+        })
     });
 
     rsx! {
