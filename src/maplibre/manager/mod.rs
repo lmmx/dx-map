@@ -9,6 +9,7 @@ pub use events::*;
 pub use layers::*;
 pub use lifecycle::*;
 
+use crate::data::TflDataRepository;
 use crate::maplibre::bindings::Map;
 use crate::utils::log::{self, LogCategory};
 use wasm_bindgen::prelude::*;
@@ -54,13 +55,17 @@ impl MapLibreManager {
     }
 
     /// Set up map data sources and layers
-    pub fn setup_map_data(&mut self, simulation_enabled: bool) -> Result<(), JsValue> {
+    pub fn setup_map_data(
+        &mut self,
+        simulation_enabled: bool,
+        tfl_data: TflDataRepository,
+    ) -> Result<(), JsValue> {
         if let Some(map) = &self.map {
             // Register load event handler that will add layers
             self.event_manager
                 .add_load_handler(map, move |map_instance| {
                     // When map loads, add the layers
-                    layers::add_map_layers(&map_instance, simulation_enabled)
+                    layers::add_map_layers(&map_instance, simulation_enabled, tfl_data.clone())
                 })
         } else {
             Err(JsValue::from_str("Map not initialized"))

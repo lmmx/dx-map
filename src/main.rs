@@ -6,6 +6,7 @@ use console_log;
 use log::Level;
 
 mod app;
+mod data;
 mod maplibre; // Add the new MapLibre module
 mod utils; // Add the new utils module
 

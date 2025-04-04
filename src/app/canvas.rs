@@ -2,12 +2,13 @@ use dioxus::prelude::*;
 use wasm_bindgen::{JsValue, closure::Closure};
 
 use super::TflLayers;
+use crate::data::TflDataRepository;
 use crate::maplibre::helpers::{add_inline_script, load_css, load_script};
 use crate::maplibre::manager::MapLibreManager;
 use crate::utils::log::{self, LogCategory};
 
 #[component]
-pub fn Canvas(layers: Signal<TflLayers>) -> Element {
+pub fn Canvas(layers: Signal<TflLayers>, tfl_data: Signal<TflDataRepository>) -> Element {
     // Add a flag to track if we've already initialized the map
     let mut already_initialized = use_signal(|| false);
 
@@ -70,7 +71,7 @@ pub fn Canvas(layers: Signal<TflLayers>) -> Element {
             }
 
             log::info_with_category(LogCategory::Map, "Setting up map data...");
-            if let Err(err) = mg.setup_map_data(layers.read().simulation) {
+            if let Err(err) = mg.setup_map_data(layers.read().simulation, tfl_data.read().clone()) {
                 log::error_with_category(
                     LogCategory::Map,
                     &format!("Failed to set up map data: {err:?}"),
