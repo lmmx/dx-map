@@ -1,10 +1,7 @@
 // Layer management for map
 use crate::data::TflDataRepository;
 use crate::maplibre::bindings::Map;
-use crate::maplibre::helpers::{
-    create_circle_layer,
-    create_label_layer, create_line_layer,
-};
+use crate::maplibre::helpers::{create_circle_layer, create_label_layer, create_line_layer};
 use crate::utils::log::{LogCategory, with_context};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
