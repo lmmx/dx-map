@@ -1,5 +1,4 @@
 use crate::utils::log::{self, LogCategory, with_context};
-use dioxus::prelude::*;
 use js_sys::Object;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;

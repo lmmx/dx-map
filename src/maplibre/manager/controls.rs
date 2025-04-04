@@ -58,29 +58,6 @@ impl ControlManager {
         })
     }
 
-    /// Remove a control from the map
-    pub fn remove_control(&mut self, map: &Map, id: &str) -> Result<(), JsValue> {
-        with_context(
-            "ControlManager::remove_control",
-            LogCategory::Map,
-            |logger| {
-                if let Some(control_info) = self.registered_controls.remove(id) {
-                    // We don't actually have a way to get the control object back,
-                    // so this would need to be changed to store the actual control objects
-                    // Not implemented in this version as it's not used in the original code
-                    logger.warn(&format!(
-                        "Control '{}' removed from registry but not from map (not implemented)",
-                        id
-                    ));
-                    Ok(())
-                } else {
-                    logger.error(&format!("Control '{}' not found", id));
-                    Err(JsValue::from_str(&format!("Control '{}' not found", id)))
-                }
-            },
-        )
-    }
-
     /// Add all standard controls to the map
     pub fn add_all_controls(&mut self, map: &Map) -> Result<(), JsValue> {
         with_context(

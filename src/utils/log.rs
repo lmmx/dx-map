@@ -57,6 +57,7 @@ impl LogCategory {
 static mut ENABLED_CATEGORIES: [bool; 5] = [true, true, true, true, true];
 
 // Enable/disable a specific category
+#[allow(dead_code)]
 pub fn set_category_enabled(category: LogCategory, enabled: bool) {
     unsafe {
         ENABLED_CATEGORIES[category as usize] = enabled;
@@ -102,16 +103,19 @@ fn log_base(level: LogLevel, category: LogCategory, message: &str, source_info: 
 }
 
 // Debug log
+#[allow(dead_code)]
 pub fn debug(message: &str) {
     log_base(LogLevel::Debug, LogCategory::General, message, None);
 }
 
 // Debug log with category
+#[allow(dead_code)]
 pub fn debug_with_category(category: LogCategory, message: &str) {
     log_base(LogLevel::Debug, category, message, None);
 }
 
 // Debug log with source info
+#[allow(dead_code)]
 pub fn debug_with_source(message: &str, file: &str, line: u32) {
     let source_info = format!("{}:{}", file, line);
     log_base(
@@ -123,12 +127,14 @@ pub fn debug_with_source(message: &str, file: &str, line: u32) {
 }
 
 // Debug log with category and source info
+#[allow(dead_code)]
 pub fn debug_with_category_and_source(category: LogCategory, message: &str, file: &str, line: u32) {
     let source_info = format!("{}:{}", file, line);
     log_base(LogLevel::Debug, category, message, Some(&source_info));
 }
 
 // Conditional debug log that only evaluates if debug level is enabled
+#[allow(dead_code)]
 pub fn debug_enabled<F>(f: F)
 where
     F: FnOnce() -> String,
@@ -149,26 +155,31 @@ pub fn info_with_category(category: LogCategory, message: &str) {
 }
 
 // Warning log
+#[allow(dead_code)]
 pub fn warn(message: &str) {
     log_base(LogLevel::Warn, LogCategory::General, message, None);
 }
 
 // Warning log with category
+#[allow(dead_code)]
 pub fn warn_with_category(category: LogCategory, message: &str) {
     log_base(LogLevel::Warn, category, message, None);
 }
 
 // Error log
+#[allow(dead_code)]
 pub fn error(message: &str) {
     log_base(LogLevel::Error, LogCategory::General, message, None);
 }
 
 // Error log with category
+#[allow(dead_code)]
 pub fn error_with_category(category: LogCategory, message: &str) {
     log_base(LogLevel::Error, category, message, None);
 }
 
 // Format and log
+#[allow(dead_code)]
 pub fn format_and_log(level: LogLevel, category: LogCategory, fmt: &str, args: &[&str]) {
     if level < get_log_level() || !is_category_enabled(category) {
         return;
@@ -212,6 +223,7 @@ impl ContextLogger {
         log_base(LogLevel::Info, self.category, message, Some(&self.context));
     }
 
+    #[allow(dead_code)]
     pub fn warn(&self, message: &str) {
         log_base(LogLevel::Warn, self.category, message, Some(&self.context));
     }
