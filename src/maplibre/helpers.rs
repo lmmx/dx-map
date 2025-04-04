@@ -92,11 +92,97 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
                 true,
             ));
             transport_layers.push(&Layer::new(
-                "overground",
-                "Overground",
-                "overground-line-layer",
+                "tube-victoria",
+                "Victoria Line",
+                "victoria-line-layer",
                 true,
             ));
+            transport_layers.push(&Layer::new(
+                "tube-district",
+                "District Line",
+                "district-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-bakerloo",
+                "Bakerloo Line",
+                "bakerloo-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-hammersmith-city",
+                "Hammersmith & City Line",
+                "hammersmith-city-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-piccadilly",
+                "Piccadilly Line",
+                "piccadilly-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-jubilee",
+                "Jubilee Line",
+                "jubilee-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-metropolitan",
+                "Metropolitan Line",
+                "metropolitan-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-circle",
+                "Circle Line",
+                "circle-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-waterloo-city",
+                "Waterloo & City Line",
+                "waterloo-city-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tube-elizabeth",
+                "Elizabeth Line",
+                "elizabeth-line-layer",
+                true,
+            ));
+            // Non-tube
+            transport_layers.push(&Layer::new(
+                "overground",
+                "Overground",
+                "london-overground-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "cable-car",
+                "Cable Car",
+                "london-cable-car-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "dlr",
+                "DLR",
+                "dlr-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "tram",
+                "Tram",
+                "tram-line-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "thameslink",
+                "Thameslink",
+                "thameslink-line-layer",
+                true,
+            ));
+
 
             let transport_group = LayerGroup::new("Transport", &transport_layers);
             layer_groups.push(&transport_group);
