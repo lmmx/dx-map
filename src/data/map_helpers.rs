@@ -223,14 +223,16 @@ pub fn get_line_color(line_name: &str) -> &'static str {
         "elizabeth" => "#6950A1",
         "hammersmith-city" => "#F3A9BB",
         "jubilee" => "#A0A5A9",
+        "london-cable-car" => "#AF174C",
+        "london-overground" => "#EE7C0E",
         "metropolitan" => "#9B0056",
         "northern" => "#000000",
-        "overground" => "#EE7C0E",
         "piccadilly" => "#003688",
+        "thameslink" => "#C1007C",
         "tram" => "#84B817",
         "victoria" => "#0098D4",
         "waterloo-city" => "#95CDBA",
-        _ => "#999999", // Default gray for unknown lines
+        _ => "#FFFFFF", // Default white for unknown lines
     }
 }
 
