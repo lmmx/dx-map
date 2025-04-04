@@ -1,8 +1,8 @@
 use super::model::{Platform, PlatformsResponse, Station, StationsResponse};
 use crate::utils::log::{self, LogCategory};
 use dioxus::prelude::*;
-use wasm_bindgen::{JsCast, JsValue};
-use web_sys::{Request, RequestInit, RequestMode, Response};
+use wasm_bindgen::JsCast;
+use web_sys::Response;
 
 // Define asset paths for our data files
 const STATIONS_JSON_PATH: Asset = asset!("/assets/data/stations.json");
@@ -25,7 +25,7 @@ pub async fn load_stations() -> Result<Vec<Station>, String> {
     let response_future = wasm_bindgen_futures::JsFuture::from(promise);
 
     // Await the response
-    let response_value = match wasm_bindgen_futures::JsFuture::from(response_future).await {
+    let response_value = match response_future.await {
         Ok(val) => val,
         Err(e) => return Err(format!("Failed to fetch stations: {:?}", e)),
     };
@@ -44,7 +44,7 @@ pub async fn load_stations() -> Result<Vec<Station>, String> {
         .map_err(|e| format!("Failed to get response text: {:?}", e))?;
     let text_future = wasm_bindgen_futures::JsFuture::from(text_promise);
 
-    let text = match wasm_bindgen_futures::JsFuture::from(text_future).await {
+    let text = match text_future.await {
         Ok(val) => val.as_string().ok_or("Response is not a string")?,
         Err(e) => return Err(format!("Failed to get response text: {:?}", e)),
     };
@@ -83,7 +83,7 @@ pub async fn load_platforms() -> Result<Vec<Platform>, String> {
     let response_future = wasm_bindgen_futures::JsFuture::from(promise);
 
     // Await the response
-    let response_value = match wasm_bindgen_futures::JsFuture::from(response_future).await {
+    let response_value = match response_future.await {
         Ok(val) => val,
         Err(e) => return Err(format!("Failed to fetch platforms: {:?}", e)),
     };
@@ -102,7 +102,7 @@ pub async fn load_platforms() -> Result<Vec<Platform>, String> {
         .map_err(|e| format!("Failed to get response text: {:?}", e))?;
     let text_future = wasm_bindgen_futures::JsFuture::from(text_promise);
 
-    let text = match wasm_bindgen_futures::JsFuture::from(text_future).await {
+    let text = match text_future.await {
         Ok(val) => val.as_string().ok_or("Response is not a string")?,
         Err(e) => return Err(format!("Failed to get response text: {:?}", e)),
     };

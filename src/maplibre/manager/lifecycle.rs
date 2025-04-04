@@ -1,7 +1,7 @@
 // Map lifecycle management: initialization and cleanup
 use crate::maplibre::bindings::Map;
 use crate::maplibre::helpers::create_map_options;
-use crate::utils::log::{self, LogCategory, with_context};
+use crate::utils::log::{LogCategory, with_context};
 use wasm_bindgen::prelude::*;
 use web_sys::window;
 

@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use wasm_bindgen::{JsValue, closure::Closure};
+use wasm_bindgen::closure::Closure;
 
 use super::TflLayers;
 use crate::data::TflDataRepository;
@@ -26,7 +26,7 @@ pub fn Canvas(layers: Signal<TflLayers>, tfl_data: Signal<TflDataRepository>) ->
         // Check if we've already initialized - avoid double initialization
         if *already_initialized.write() {
             log::info_with_category(LogCategory::Map, "Map already initialized, skipping");
-            return (|| {})();
+            return {};
         }
 
         // Mark as initialized immediately to prevent potential recursion
@@ -42,7 +42,7 @@ pub fn Canvas(layers: Signal<TflLayers>, tfl_data: Signal<TflDataRepository>) ->
         let _ = add_inline_script(include_str!("../app/js/simulation_control.js"));
 
         // Prepare the "on_load" closure for when the external script finishes
-        let mut manager_clone = manager.clone(); // Create a clone to avoid capturing the original signal
+        let mut manager_clone = manager; // Create a clone to avoid capturing the original signal
 
         log::info_with_category(LogCategory::Map, "Creating script onload closure...");
         let on_load = Closure::wrap(Box::new(move || {
@@ -102,9 +102,9 @@ pub fn Canvas(layers: Signal<TflLayers>, tfl_data: Signal<TflDataRepository>) ->
         log::info_with_category(LogCategory::Map, "Canvas effect setup completed");
 
         // Return an empty cleanup closure
-        (|| {
+        {
             log::info_with_category(LogCategory::Map, "Canvas effect cleanup called");
-        })()
+        }
     });
 
     // 3) Render the container in your JSX/RSX

@@ -3,7 +3,7 @@ use crate::maplibre::bindings::{
     KeyControl, LayerSwitcher, Map, NavigationControl, ScaleControl, SimulationControl,
 };
 use crate::maplibre::helpers::{create_layer_groups, create_scale_control_options};
-use crate::utils::log::{self, LogCategory, with_context};
+use crate::utils::log::{LogCategory, with_context};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 

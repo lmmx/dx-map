@@ -1,6 +1,5 @@
 use super::model::{Route, Vehicle};
-use crate::utils::log::{self, LogCategory, with_context};
-use js_sys;
+use crate::utils::log::{LogCategory, with_context};
 use std::cell::RefCell;
 
 /// Core shared state that contains all vehicles and simulation data

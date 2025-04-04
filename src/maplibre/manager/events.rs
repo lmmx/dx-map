@@ -37,7 +37,7 @@ impl EventManager {
             let event_listeners = self
                 .registered_events
                 .entry(event.to_string())
-                .or_insert_with(Vec::new);
+                .or_default();
             event_listeners.push(closure);
 
             logger.debug(&format!(
@@ -128,7 +128,7 @@ impl EventManager {
                 let event_listeners = self
                     .registered_events
                     .entry("load".to_string())
-                    .or_insert_with(Vec::new);
+                    .or_default();
                 event_listeners.push(load_handler);
 
                 logger.debug("'load' event handler registered and stored");

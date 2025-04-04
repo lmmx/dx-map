@@ -7,7 +7,6 @@ mod lifecycle;
 pub use controls::*;
 pub use events::*;
 pub use layers::*;
-pub use lifecycle::*;
 
 use crate::data::TflDataRepository;
 use crate::maplibre::bindings::Map;

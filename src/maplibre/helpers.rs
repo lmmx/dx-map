@@ -1,5 +1,5 @@
 use crate::maplibre::bindings::*;
-use crate::utils::log::{self, LogCategory, with_context};
+use crate::utils::log::{LogCategory, with_context};
 use js_sys::{Array, Object, Reflect};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;

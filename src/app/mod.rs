@@ -77,9 +77,9 @@ impl Default for TflLayers {
 pub fn app() -> Element {
     let mut show_layers_panel = use_signal(|| false);
     let mut show_key_panel = use_signal(|| false);
-    let mut show_simulation_panel = use_signal(|| false); // New signal for simulation controls
-    let layers = use_signal(|| TflLayers::default());
-    let mut tfl_data = use_signal(|| TflDataRepository::default());
+    let show_simulation_panel = use_signal(|| false); // New signal for simulation controls
+    let layers = use_signal(TflLayers::default);
+    let mut tfl_data = use_signal(TflDataRepository::default);
 
     use_future(move || async move {
         with_context("app::load_tfl_data", LogCategory::App, |logger| {
@@ -90,7 +90,7 @@ pub fn app() -> Element {
                 logger.info("Initializing TfL data repository");
 
                 // Clone the signal to move into the async task
-                let tfl_data_clone = tfl_data.clone();
+                let tfl_data_clone = tfl_data;
 
                 // Use spawn_local for the async operation, but don't use logger inside
                 wasm_bindgen_futures::spawn_local(async move {
@@ -147,7 +147,7 @@ pub fn app() -> Element {
                     );
 
                     // Create a callback for the 'load' event
-                    let tfl_data_clone = tfl_data.clone();
+                    let tfl_data_clone = tfl_data;
                     let load_callback = Closure::wrap(Box::new(move || {
                         log::info_with_category(
                             LogCategory::App,
@@ -338,7 +338,7 @@ pub fn app() -> Element {
 /// Helper function to add TFL data layers to an already initialized map
 fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRepository) {
     use crate::maplibre::helpers::{create_circle_layer, create_label_layer, create_line_layer};
-    use crate::utils::log::{self, LogCategory, with_context};
+    use crate::utils::log::{LogCategory, with_context};
 
     with_context("add_tfl_data_to_map", LogCategory::Map, |logger| {
         logger.info("Adding TFL data layers to map");

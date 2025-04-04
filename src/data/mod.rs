@@ -3,19 +3,16 @@ pub mod map_helpers;
 pub mod model;
 
 // Re-export commonly used items
-pub use loader::{
-    filter_valid_stations, group_platforms_by_station, load_platforms, load_stations,
-};
 pub use map_helpers::{
-    generate_all_line_data, get_line_color, line_to_geojson, stations_to_geojson,
+    generate_all_line_data, stations_to_geojson,
 };
-pub use model::{Platform, Station};
 
 use crate::utils::log::{self, LogCategory};
 use std::collections::HashMap;
 
 /// A consolidated data repository for TfL data
 #[derive(Clone)]
+#[derive(Default)]
 pub struct TflDataRepository {
     /// All stations with valid coordinates
     pub stations: Vec<model::Station>,
@@ -27,16 +24,6 @@ pub struct TflDataRepository {
     pub is_loaded: bool,
 }
 
-impl Default for TflDataRepository {
-    fn default() -> Self {
-        Self {
-            stations: Vec::new(),
-            platforms_by_station: HashMap::new(),
-            station_by_id: HashMap::new(),
-            is_loaded: false,
-        }
-    }
-}
 
 impl TflDataRepository {
     /// Initialize the data repository by loading all data
