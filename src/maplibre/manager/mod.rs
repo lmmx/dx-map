@@ -9,7 +9,7 @@ pub use events::*;
 pub use layers::*;
 pub use lifecycle::*;
 
-use crate::maplibre::bindings::*;
+use crate::maplibre::bindings::Map;
 use crate::utils::log::{self, LogCategory};
 use wasm_bindgen::prelude::*;
 

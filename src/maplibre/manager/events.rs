@@ -1,5 +1,5 @@
 // Event management system for the map
-use crate::maplibre::bindings::*;
+use crate::maplibre::bindings::Map;
 use crate::utils::log::{self, LogCategory, with_context};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;

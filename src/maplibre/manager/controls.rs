@@ -1,6 +1,6 @@
 // Controls management for map
-use crate::maplibre::bindings::*;
-use crate::maplibre::helpers::*;
+use crate::maplibre::bindings::{NavigationControl, ScaleControl, KeyControl, Map, LayerSwitcher, SimulationControl};
+use crate::maplibre::helpers::{create_scale_control_options, create_layer_groups};
 use crate::utils::log::{self, LogCategory, with_context};
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
