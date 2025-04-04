@@ -9,9 +9,9 @@ mod key_panel;
 mod layer_panel;
 mod simulation; // New module for vehicle simulation
 
+use crate::data::TflDataRepository;
 use crate::maplibre::helpers;
 use crate::utils::log::{self, LogCategory, with_context};
-use crate::data::TflDataRepository;
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
@@ -84,28 +84,31 @@ pub fn app() -> Element {
     use_future(move || async move {
         with_context("app::load_tfl_data", LogCategory::App, |logger| {
             logger.info("Loading TfL station and platform data");
-            
+
             // Only load if not already loaded
             if !tfl_data.read().is_loaded {
                 logger.info("Initializing TfL data repository");
 
                 // Clone the signal to move into the async task
                 let tfl_data_clone = tfl_data.clone();
-                
+
                 // Use spawn_local for the async operation, but don't use logger inside
                 wasm_bindgen_futures::spawn_local(async move {
                     match TflDataRepository::initialize().await {
                         Ok(repository) => {
                             log::info_with_category(
                                 LogCategory::App,
-                                &format!("TfL data loaded successfully with {} stations", repository.stations.len())
+                                &format!(
+                                    "TfL data loaded successfully with {} stations",
+                                    repository.stations.len()
+                                ),
                             );
                             tfl_data.set(repository);
                         }
                         Err(e) => {
                             log::error_with_category(
                                 LogCategory::App,
-                                &format!("Failed to load TfL data: {}", e)
+                                &format!("Failed to load TfL data: {}", e),
                             );
                         }
                     }
@@ -120,52 +123,51 @@ pub fn app() -> Element {
     use_effect(move || {
         // Only react if the data is loaded
         if tfl_data.read().is_loaded {
-            log::info_with_category(
-                LogCategory::App,
-                "TFL data loaded, updating map layers"
-            );
-            
+            log::info_with_category(LogCategory::App, "TFL data loaded, updating map layers");
+
             // Update the map with the TFL data
-            if let Some(manager) = window().and_then(|w| 
-                js_sys::Reflect::get(&w, &JsValue::from_str("mapInstance")).ok()
-            ) {
+            if let Some(manager) = window()
+                .and_then(|w| js_sys::Reflect::get(&w, &JsValue::from_str("mapInstance")).ok())
+            {
                 let map: crate::maplibre::bindings::Map = manager.clone().into();
-                
+
                 // We need to check if the map style is loaded
                 if map.is_style_loaded() {
                     log::info_with_category(
                         LogCategory::App,
-                        "Map style loaded, adding TFL data layers"
+                        "Map style loaded, adding TFL data layers",
                     );
-                    
+
                     // Call a helper function to add the TFL data to the map
                     add_tfl_data_to_map(&map, tfl_data.read().clone());
                 } else {
                     log::info_with_category(
                         LogCategory::App,
-                        "Map style not loaded yet, waiting for 'load' event"
+                        "Map style not loaded yet, waiting for 'load' event",
                     );
-                    
+
                     // Create a callback for the 'load' event
                     let tfl_data_clone = tfl_data.clone();
                     let load_callback = Closure::wrap(Box::new(move || {
                         log::info_with_category(
                             LogCategory::App,
-                            "Map 'load' event fired, adding TFL data layers"
+                            "Map 'load' event fired, adding TFL data layers",
                         );
-                        
+
                         // If we get here via a callback, we need to get the map again
                         if let Some(window) = window() {
-                            if let Ok(map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
+                            if let Ok(map_instance) =
+                                js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance"))
+                            {
                                 let map: crate::maplibre::bindings::Map = map_instance.into();
                                 add_tfl_data_to_map(&map, tfl_data_clone.read().clone());
                             }
                         }
                     }) as Box<dyn FnMut()>);
-                    
+
                     // Register the callback
                     map.on("load", &load_callback);
-                    
+
                     // Leak the callback to keep it alive
                     load_callback.forget();
                 }
@@ -335,8 +337,8 @@ pub fn app() -> Element {
 
 /// Helper function to add TFL data layers to an already initialized map
 fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRepository) {
-    use crate::utils::log::{self, LogCategory, with_context};
     use crate::maplibre::helpers::{create_circle_layer, create_label_layer, create_line_layer};
+    use crate::utils::log::{self, LogCategory, with_context};
 
     with_context("add_tfl_data_to_map", LogCategory::Map, |logger| {
         logger.info("Adding TFL data layers to map");
@@ -345,14 +347,19 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
         if let Ok(stations_geojson) = crate::data::stations_to_geojson(&tfl_data.stations) {
             // Make sure the source doesn't already exist
             if map.get_layer("tfl-stations-layer").is_none() {
-                logger.info(&format!("Adding {} stations to map", tfl_data.stations.len()));
+                logger.info(&format!(
+                    "Adding {} stations to map",
+                    tfl_data.stations.len()
+                ));
 
                 // Add the source
                 web_sys::console::log_1(&stations_geojson);
                 map.add_source("tfl-stations", &stations_geojson);
 
                 // Add a circle layer for the stations
-                if let Ok(stations_layer) = create_circle_layer("tfl-stations-layer", "tfl-stations") {
+                if let Ok(stations_layer) =
+                    create_circle_layer("tfl-stations-layer", "tfl-stations")
+                {
                     map.add_layer(&stations_layer);
                     logger.debug("Added stations layer");
                 }

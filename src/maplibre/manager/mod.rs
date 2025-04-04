@@ -55,7 +55,11 @@ impl MapLibreManager {
     }
 
     /// Set up map data sources and layers
-    pub fn setup_map_data(&mut self, simulation_enabled: bool, tfl_data: TflDataRepository) -> Result<(), JsValue> {
+    pub fn setup_map_data(
+        &mut self,
+        simulation_enabled: bool,
+        tfl_data: TflDataRepository,
+    ) -> Result<(), JsValue> {
         if let Some(map) = &self.map {
             // Register load event handler that will add layers
             self.event_manager
