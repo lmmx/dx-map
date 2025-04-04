@@ -29,7 +29,7 @@ pub fn create_map_options(container_id: &str) -> Result<JsValue, JsValue> {
 
         // Set London center
         let center = Array::new();
-        center.push(&JsValue::from_f64(-0.1276));
+        center.push(&JsValue::from_f64(-0.1275));
         center.push(&JsValue::from_f64(51.5072));
         Reflect::set(&options, &JsValue::from_str("center"), &center)?;
 
@@ -43,13 +43,13 @@ pub fn create_map_options(container_id: &str) -> Result<JsValue, JsValue> {
         // Set max bounds
         let bounds = Array::new();
         let sw = Array::new();
-        sw.push(&JsValue::from_f64(-0.489));
-        sw.push(&JsValue::from_f64(51.28));
+        sw.push(&JsValue::from_f64(-1.0)); // Westernmost (Reading)
+        sw.push(&JsValue::from_f64(51.3)); // Southernmost (Coulsdon South)
         bounds.push(&sw);
 
         let ne = Array::new();
-        ne.push(&JsValue::from_f64(0.236));
-        ne.push(&JsValue::from_f64(51.686));
+        ne.push(&JsValue::from_f64(0.346)); // Easternmost (Shenfield)
+        ne.push(&JsValue::from_f64(51.72)); // Northernmost (Cheshunt)
         bounds.push(&ne);
 
         Reflect::set(&options, &JsValue::from_str("maxBounds"), &bounds)?;
