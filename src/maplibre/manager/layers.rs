@@ -1,4 +1,5 @@
 // Layer management for map
+use crate::data::TflDataRepository;
 use crate::maplibre::bindings::Map;
 use crate::maplibre::helpers::{create_circle_layer, create_line_layer, create_label_layer, create_geojson_points_source, create_geojson_line_source};
 use crate::utils::log::{self, LogCategory, with_context};
@@ -155,98 +156,60 @@ impl LayerManager {
 }
 
 /// Helper function to add MapLibre layers
-pub fn add_map_layers(map_instance: &JsValue, simulation_enabled: bool) -> Result<(), JsValue> {
+pub fn add_map_layers(map_instance: &JsValue, simulation_enabled: bool, tfl_data: TflDataRepository) -> Result<(), JsValue> {
     with_context("add_map_layers", LogCategory::Map, |logger| {
         logger.debug("Creating map layers");
 
         let map: Map = map_instance.clone().into();
         logger.debug("Map instance cloned");
 
-        // Central Line
-        logger.debug("Adding Central Line");
-        let central_coords = [
-            (-0.22, 51.51),
-            (-0.18, 51.52),
-            (-0.14, 51.515),
-            (-0.10, 51.52),
-            (-0.05, 51.52),
-        ];
-        let central_source = create_geojson_line_source(&central_coords)?;
-        map.add_source("central-line", &central_source);
-        logger.debug("Central Line source added");
+        if tfl_data.is_loaded {
+            // Add all stations as a GeoJSON source
+            logger.info("Adding all TfL stations to the map");
 
-        let central_layer =
-            create_line_layer("central-line-layer", "central-line", "#DC241F", 4.0)?;
-        map.add_layer(&central_layer);
-        logger.debug("Central Line layer added");
+            // Convert stations to GeoJSON
+            let stations_geojson = crate::data::stations_to_geojson(&tfl_data.stations)?;
+            map.add_source("tfl-stations", &stations_geojson);
+            logger.debug("TfL stations source added");
 
-        // Northern Line
-        logger.debug("Adding Northern Line");
-        let northern_coords = [
-            (-0.15, 51.48),
-            (-0.12, 51.50),
-            (-0.12, 51.53),
-            (-0.14, 51.55),
-        ];
-        let northern_source = create_geojson_line_source(&northern_coords)?;
-        map.add_source("northern-line", &northern_source);
-        logger.debug("Northern Line source added");
+            // Add a circle layer for the stations
+            let stations_layer = create_circle_layer("tfl-stations-layer", "tfl-stations")?;
+            map.add_layer(&stations_layer);
+            logger.debug("TfL stations layer added");
 
-        let northern_layer =
-            create_line_layer("northern-line-layer", "northern-line", "#000000", 4.0)?;
-        map.add_layer(&northern_layer);
-        logger.debug("Northern Line layer added");
+            // Add a label layer for the stations
+            let labels_layer = create_label_layer("tfl-station-labels", "tfl-stations")?;
+            map.add_layer(&labels_layer);
+            logger.debug("TfL station labels layer added");
 
-        // Overground
-        logger.debug("Adding Overground");
-        let overground_coords = [
-            (-0.20, 51.53),
-            (-0.16, 51.54),
-            (-0.10, 51.54),
-            (-0.05, 51.55),
-        ];
-        let overground_source = create_geojson_line_source(&overground_coords)?;
-        map.add_source("overground-line", &overground_source);
-        logger.debug("Overground source added");
+            // Add all tube lines
+            logger.info("Adding TfL lines to the map");
 
-        let overground_layer =
-            create_line_layer("overground-line-layer", "overground-line", "#EE7C0E", 4.0)?;
-        map.add_layer(&overground_layer);
-        logger.debug("Overground layer added");
+            match crate::data::generate_all_line_data(&tfl_data) {
+                Ok(line_data) => {
+                    let line_count = line_data.len(); // Store the length before moving line_data
+                                                      
+                    for (line_name, line_geojson, color) in line_data {
+                        let source_id = format!("{}-line", line_name);
+                        let layer_id = format!("{}-line-layer", line_name);
 
-        // Stations
-        logger.debug("Adding Stations");
-        let mut stations = Vec::new();
+                        // Add the source
+                        map.add_source(&source_id, &line_geojson);
 
-        let mut oxford_circus = HashMap::new();
-        oxford_circus.insert("name".to_string(), JsValue::from_str("Oxford Circus"));
-        oxford_circus.insert("lng".to_string(), JsValue::from_f64(-0.1418));
-        oxford_circus.insert("lat".to_string(), JsValue::from_f64(51.5152));
-        stations.push(oxford_circus);
+                        // Add the layer
+                        let line_layer = create_line_layer(&layer_id, &source_id, &color, 4.0)?;
+                        map.add_layer(&line_layer);
 
-        let mut kings_cross = HashMap::new();
-        kings_cross.insert("name".to_string(), JsValue::from_str("Kings Cross"));
-        kings_cross.insert("lng".to_string(), JsValue::from_f64(-0.1234));
-        kings_cross.insert("lat".to_string(), JsValue::from_f64(51.5308));
-        stations.push(kings_cross);
+                        logger.debug(&format!("Added {} line", line_name));
+                    }
 
-        let mut liverpool_st = HashMap::new();
-        liverpool_st.insert("name".to_string(), JsValue::from_str("Liverpool Street"));
-        liverpool_st.insert("lng".to_string(), JsValue::from_f64(-0.0827));
-        liverpool_st.insert("lat".to_string(), JsValue::from_f64(51.5178));
-        stations.push(liverpool_st);
-
-        let stations_source = create_geojson_points_source(&stations)?;
-        map.add_source("stations", &stations_source);
-        logger.debug("Stations source added");
-
-        let stations_layer = create_circle_layer("stations-layer", "stations")?;
-        map.add_layer(&stations_layer);
-        logger.debug("Stations layer added");
-
-        let labels_layer = create_label_layer("station-labels", "stations")?;
-        map.add_layer(&labels_layer);
-        logger.debug("Station labels layer added");
+                    logger.info(&format!("Added {} TfL lines to the map", line_count));
+                }
+                Err(e) => {
+                    logger.error(&format!("Failed to generate line data: {:?}", e));
+                }
+            }
+        }
 
         logger.info("All map layers added successfully");
 

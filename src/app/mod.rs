@@ -11,6 +11,7 @@ mod simulation; // New module for vehicle simulation
 
 use crate::maplibre::helpers;
 use crate::utils::log::{self, LogCategory, with_context};
+use crate::data::TflDataRepository;
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
@@ -76,6 +77,42 @@ pub fn app() -> Element {
     let mut show_key_panel = use_signal(|| false);
     let mut show_simulation_panel = use_signal(|| false); // New signal for simulation controls
     let layers = use_signal(|| TflLayers::default());
+    let mut tfl_data = use_signal(|| TflDataRepository::default());
+
+    use_future(move || async move {
+        with_context("app::load_tfl_data", LogCategory::App, |logger| {
+            logger.info("Loading TfL station and platform data");
+            
+            // Only load if not already loaded
+            if !tfl_data.read().is_loaded {
+                logger.info("Initializing TfL data repository");
+
+                // Clone the signal to move into the async task
+                let tfl_data_clone = tfl_data.clone();
+                
+                // Use spawn_local for the async operation, but don't use logger inside
+                wasm_bindgen_futures::spawn_local(async move {
+                    match TflDataRepository::initialize().await {
+                        Ok(repository) => {
+                            log::info_with_category(
+                                LogCategory::App,
+                                &format!("TfL data loaded successfully with {} stations", repository.stations.len())
+                            );
+                            tfl_data.set(repository);
+                        }
+                        Err(e) => {
+                            log::error_with_category(
+                                LogCategory::App,
+                                &format!("Failed to load TfL data: {}", e)
+                            );
+                        }
+                    }
+                });
+            } else {
+                logger.info("TfL data already loaded, skipping");
+            }
+        });
+    });
 
     // Initialize simulation JS when app loads
     use_effect(move || {
@@ -219,7 +256,7 @@ pub fn app() -> Element {
             class: "app-content",
 
             // Main map container
-            Canvas { layers: layers }
+            Canvas { layers: layers, tfl_data: tfl_data }
 
             // Layer panel component - conditionally shown
             LayerPanel {
