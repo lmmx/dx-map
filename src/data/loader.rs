@@ -129,10 +129,10 @@ pub fn filter_valid_stations(stations: Vec<Station>) -> Vec<Station> {
     stations
         .into_iter()
         .filter(|station| {
-            !station.Lat.is_nan()
-                && !station.Lon.is_nan()
-                && station.Lat != 0.0
-                && station.Lon != 0.0
+            !station.lat.is_nan()
+                && !station.lon.is_nan()
+                && station.lat != 0.0
+                && station.lon != 0.0
         })
         .collect()
 }
@@ -144,7 +144,7 @@ pub fn group_platforms_by_station(
     let mut map = std::collections::HashMap::new();
 
     for platform in platforms {
-        map.entry(platform.StationUniqueId.clone())
+        map.entry(platform.station_unique_id.clone())
             .or_insert_with(Vec::new)
             .push(platform);
     }

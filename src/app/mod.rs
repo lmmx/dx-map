@@ -77,7 +77,6 @@ impl Default for TflLayers {
 pub fn app() -> Element {
     let mut show_layers_panel = use_signal(|| false);
     let mut show_key_panel = use_signal(|| false);
-    let show_simulation_panel = use_signal(|| false); // New signal for simulation controls
     let layers = use_signal(TflLayers::default);
     let mut tfl_data = use_signal(TflDataRepository::default);
 

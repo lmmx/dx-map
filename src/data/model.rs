@@ -7,72 +7,98 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Station {
     /// Unique identifier for the station
-    pub StationUniqueId: String,
+    #[serde(rename = "StationUniqueId")]
+    pub station_unique_id: String,
     /// Human-readable name of the station
-    pub StationName: String,
+    #[serde(rename = "StationName")]
+    pub station_name: String,
     /// Fare zones the station belongs to (comma-separated)
-    pub FareZones: String,
+    #[serde(rename = "FareZones")]
+    pub fare_zones: String,
     /// Optional hub Naptan code for interchanges
+    #[serde(rename = "HubNaptanCode")]
     #[serde(default)]
-    pub HubNaptanCode: Option<String>,
+    pub hub_naptan_code: Option<String>,
     /// Whether the station has Wi-Fi
+    #[serde(rename = "Wifi")]
     #[serde(default)]
-    pub Wifi: bool,
+    pub wifi: bool,
     /// Unique ID for outside of the station
-    pub OutsideStationUniqueId: String,
+    #[serde(rename = "OutsideStationUniqueId")]
+    pub outside_station_unique_id: String,
     /// Latitude coordinate of the station
-    pub Lat: f64,
+    #[serde(rename = "Lat")]
+    pub lat: f64,
     /// Longitude coordinate of the station
-    pub Lon: f64,
+    #[serde(rename = "Lon")]
+    pub lon: f64,
     /// List of component station codes that make up this station
+    #[serde(rename = "ComponentStations")]
     #[serde(default)]
-    pub ComponentStations: Vec<String>,
+    pub component_stations: Vec<String>,
 }
 
 /// Represents a platform at a TfL station
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Platform {
     /// Unique identifier for this platform
-    pub PlatformUniqueId: String,
+    #[serde(rename = "PlatformUniqueId")]
+    pub platform_unique_id: String,
     /// Station this platform belongs to
-    pub StationUniqueId: String,
+    #[serde(rename = "StationUniqueId")]
+    pub station_unique_id: String,
     /// Platform number (as string to handle complex numbering)
+    #[serde(rename = "PlatformNumber")]
     #[serde(default)]
-    pub PlatformNumber: Option<String>,
+    pub platform_number: Option<String>,
     /// Direction of travel (Northbound, Southbound, etc.)
+    #[serde(rename = "CardinalDirection")]
     #[serde(default)]
-    pub CardinalDirection: Option<String>,
+    pub cardinal_direction: Option<String>,
     /// Optional platform Naptan code
+    #[serde(rename = "PlatformNaptanCode")]
     #[serde(default)]
-    pub PlatformNaptanCode: Option<String>,
+    pub platform_naptan_code: Option<String>,
     /// Human-readable name for the platform
-    pub PlatformFriendlyName: String,
+    #[serde(rename = "PlatformFriendlyName")]
+    pub platform_friendly_name: String,
     /// Whether the platform is accessible to customers
-    pub IsCustomerFacing: bool,
+    #[serde(rename = "IsCustomerFacing")]
+    pub is_customer_facing: bool,
     /// Whether the platform has service interchange
-    pub HasServiceInterchange: bool,
+    #[serde(rename = "HasServiceInterchange")]
+    pub has_service_interchange: bool,
     /// Name of the station this platform is in
-    pub StationName: String,
+    #[serde(rename = "StationName")]
+    pub station_name: String,
     /// Fare zones for this station
-    pub FareZones: String,
+    #[serde(rename = "FareZones")]
+    pub fare_zones: String,
     /// Hub Naptan code if applicable
+    #[serde(rename = "HubNaptanCode")]
     #[serde(default)]
-    pub HubNaptanCode: Option<String>,
+    pub hub_naptan_code: Option<String>,
     /// Whether the station has Wi-Fi
+    #[serde(rename = "Wifi")]
     #[serde(default)]
-    pub Wifi: bool,
+    pub wifi: bool,
     /// Outside station unique ID
-    pub OutsideStationUniqueId: String,
+    #[serde(rename = "OutsideStationUniqueId")]
+    pub outside_station_unique_id: String,
     /// Stop area Naptan code
-    pub StopAreaNaptanCode: String,
+    #[serde(rename = "StopAreaNaptanCode")]
+    pub stop_area_naptan_code: String,
     /// Line this platform serves (e.g., "central", "district")
-    pub Line: String,
+    #[serde(rename = "Line")]
+    pub line: String,
     /// Direction this platform heads toward
+    #[serde(rename = "DirectionTowards")]
     #[serde(default)]
-    pub DirectionTowards: Option<String>,
+    pub direction_towards: Option<String>,
     /// Platform service group name if applicable
+    #[serde(rename = "PlatformServiceGroupName")]
     #[serde(default)]
-    pub PlatformServiceGroupName: Option<String>,
+    pub platform_service_group_name: Option<String>,
 }
 
 /// Response structure from the stations API

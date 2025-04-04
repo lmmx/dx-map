@@ -32,7 +32,7 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
 
     for station in stations {
         // Skip stations with invalid coordinates
-        if station.Lat.is_nan() || station.Lon.is_nan() {
+        if station.lat.is_nan() || station.lon.is_nan() {
             continue;
         }
 
@@ -53,8 +53,8 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
         )?;
 
         let coordinates = Array::new();
-        coordinates.push(&JsValue::from_f64(station.Lon)); // Note: GeoJSON is [lng, lat]
-        coordinates.push(&JsValue::from_f64(station.Lat));
+        coordinates.push(&JsValue::from_f64(station.lon)); // Note: GeoJSON is [lng, lat]
+        coordinates.push(&JsValue::from_f64(station.lat));
 
         Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coordinates)?;
 
@@ -65,22 +65,22 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
         Reflect::set(
             &properties,
             &JsValue::from_str("id"),
-            &JsValue::from_str(&station.StationUniqueId),
+            &JsValue::from_str(&station.station_unique_id),
         )?;
         Reflect::set(
             &properties,
             &JsValue::from_str("name"),
-            &JsValue::from_str(&station.StationName),
+            &JsValue::from_str(&station.station_name),
         )?;
         Reflect::set(
             &properties,
             &JsValue::from_str("fareZones"),
-            &JsValue::from_str(&station.FareZones),
+            &JsValue::from_str(&station.fare_zones),
         )?;
         Reflect::set(
             &properties,
             &JsValue::from_str("wifi"),
-            &JsValue::from_bool(station.Wifi),
+            &JsValue::from_bool(station.wifi),
         )?;
 
         Reflect::set(&feature, &JsValue::from_str("properties"), &properties)?;
@@ -107,13 +107,13 @@ pub fn create_line_stations_map(platforms: &[Platform]) -> HashMap<String, Vec<S
 
     for platform in platforms {
         // Skip non-TfL lines or special cases
-        if platform.Line == "national-rail" || platform.Line.is_empty() {
+        if platform.line == "national-rail" || platform.line.is_empty() {
             continue;
         }
 
-        map.entry(platform.Line.clone())
+        map.entry(platform.line.clone())
             .or_insert_with(Vec::new)
-            .push(platform.StationUniqueId.clone());
+            .push(platform.station_unique_id.clone());
     }
 
     // Deduplicate station IDs for each line
@@ -144,7 +144,7 @@ pub fn line_to_geojson(
     let mut coordinates = Vec::new();
     for station_id in station_ids {
         if let Some(station) = stations_by_id.get(station_id) {
-            coordinates.push((station.Lon, station.Lat));
+            coordinates.push((station.lon, station.lat));
         }
     }
 

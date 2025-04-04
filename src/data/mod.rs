@@ -37,7 +37,7 @@ impl TflDataRepository {
         // Create lookup map for stations
         let station_by_id = valid_stations
             .iter()
-            .map(|s| (s.StationUniqueId.clone(), s.clone()))
+            .map(|s| (s.station_unique_id.clone(), s.clone()))
             .collect();
 
         // Load and process platforms
@@ -79,7 +79,7 @@ impl TflDataRepository {
 
         // Check each station's platforms to see if any serve this line
         for (station_id, platforms) in &self.platforms_by_station {
-            let serves_line = platforms.iter().any(|p| p.Line == line_name);
+            let serves_line = platforms.iter().any(|p| p.line == line_name);
 
             if serves_line {
                 if let Some(station) = self.station_by_id.get(station_id) {
