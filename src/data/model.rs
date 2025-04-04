@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+// From the TfL topology data model, as recorded here:
+// https://github.com/lmmx/tubeulator/blob/a8fc10becac3ea04cf16b91b0c24be944df692a5/src/tubeulator/topology/data_model.py
+
 /// Represents a TfL station with its location and metadata
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Station {
@@ -34,9 +37,11 @@ pub struct Platform {
     /// Station this platform belongs to
     pub StationUniqueId: String,
     /// Platform number (as string to handle complex numbering)
-    pub PlatformNumber: String,
+    #[serde(default)]
+    pub PlatformNumber: Option<String>,
     /// Direction of travel (Northbound, Southbound, etc.)
-    pub CardinalDirection: String,
+    #[serde(default)]
+    pub CardinalDirection: Option<String>,
     /// Optional platform Naptan code
     #[serde(default)]
     pub PlatformNaptanCode: Option<String>,

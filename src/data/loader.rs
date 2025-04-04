@@ -5,8 +5,8 @@ use wasm_bindgen::{JsCast, JsValue};
 use web_sys::{Request, RequestInit, RequestMode, Response};
 
 // Define asset paths for our data files
-const STATIONS_JSON_PATH: &str = "/assets/data/stations.json";
-const PLATFORMS_JSON_PATH: &str = "/assets/data/platforms.json";
+const STATIONS_JSON_PATH: Asset = asset!("/assets/data/stations.json");
+const PLATFORMS_JSON_PATH: Asset = asset!("/assets/data/platforms.json");
 
 /// Load stations from the JSON data file using fetch
 pub async fn load_stations() -> Result<Vec<Station>, String> {
@@ -14,7 +14,7 @@ pub async fn load_stations() -> Result<Vec<Station>, String> {
     
     // Create a future to fetch the stations data
     let window = web_sys::window().ok_or("No window object available")?;
-    let promise = window.fetch_with_str(STATIONS_JSON_PATH);
+    let promise = window.fetch_with_str(STATIONS_JSON_PATH.resolve().to_str().expect("Failed to load stations JSON"));
     
     // Convert the Promise<Response> to a Future<Result<Response, JsValue>>
     let response_future = wasm_bindgen_futures::JsFuture::from(promise);
@@ -63,7 +63,7 @@ pub async fn load_platforms() -> Result<Vec<Platform>, String> {
     
     // Create a future to fetch the platforms data
     let window = web_sys::window().ok_or("No window object available")?;
-    let promise = window.fetch_with_str(PLATFORMS_JSON_PATH);
+    let promise = window.fetch_with_str(PLATFORMS_JSON_PATH.resolve().to_str().expect("Failed to load stations JSON"));
     
     // Convert the Promise<Response> to a Future<Result<Response, JsValue>>
     let response_future = wasm_bindgen_futures::JsFuture::from(promise);
