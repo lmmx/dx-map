@@ -1,5 +1,4 @@
 use crate::utils::log::{self, LogCategory, with_context};
-use dioxus::prelude::*;
 use js_sys::Object;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;
@@ -10,8 +9,8 @@ mod state;
 
 use model::{VehicleType, build_sample_routes, initialize_vehicles};
 use state::{
-    SimulationState, get_animation_frame_id, initialize_state,
-    set_animation_frame_id, toggle_pause, with_simulation_state,
+    SimulationState, get_animation_frame_id, initialize_state, set_animation_frame_id,
+    toggle_pause, with_simulation_state,
 };
 
 // MapLibre integration components

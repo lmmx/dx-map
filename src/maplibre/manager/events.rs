@@ -34,10 +34,7 @@ impl EventManager {
             map.on(event, &closure);
 
             // Store the closure so it isn't dropped
-            let event_listeners = self
-                .registered_events
-                .entry(event.to_string())
-                .or_default();
+            let event_listeners = self.registered_events.entry(event.to_string()).or_default();
             event_listeners.push(closure);
 
             logger.debug(&format!(

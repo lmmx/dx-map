@@ -88,9 +88,6 @@ pub fn app() -> Element {
             if !tfl_data.read().is_loaded {
                 logger.info("Initializing TfL data repository");
 
-                // Clone the signal to move into the async task
-                let tfl_data_clone = tfl_data;
-
                 // Use spawn_local for the async operation, but don't use logger inside
                 wasm_bindgen_futures::spawn_local(async move {
                     match TflDataRepository::initialize().await {
