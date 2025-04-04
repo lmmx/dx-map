@@ -16,6 +16,14 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
     Reflect::set(
         &geojson,
         &JsValue::from_str("type"),
+        &JsValue::from_str("geojson"),
+    )?;
+
+    // Create the FeatureCollection object inner
+    let data = Object::new();
+    Reflect::set(
+        &data,
+        &JsValue::from_str("type"),
         &JsValue::from_str("FeatureCollection"),
     )?;
     
@@ -94,8 +102,9 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
     }
     
     // Set the features array on the GeoJSON object
-    Reflect::set(&geojson, &JsValue::from_str("features"), &features)?;
-    
+    Reflect::set(&data, &JsValue::from_str("features"), &features)?;
+    Reflect::set(&geojson, &JsValue::from_str("data"), &data)?;
+
     log::debug_with_category(
         LogCategory::Map,
         &format!("Created GeoJSON with {} features", features.length()),

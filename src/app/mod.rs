@@ -15,6 +15,8 @@ use crate::data::TflDataRepository;
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
+use wasm_bindgen::{JsValue, closure::Closure};
+use web_sys::window;
 
 // If you have images or CSS as assets, define them with Dioxus' asset! macro
 const FAVICON: Asset = asset!("/assets/favicon.ico");
@@ -112,6 +114,63 @@ pub fn app() -> Element {
                 logger.info("TfL data already loaded, skipping");
             }
         });
+    });
+
+    // Add an effect to update the map when TFL data is loaded
+    use_effect(move || {
+        // Only react if the data is loaded
+        if tfl_data.read().is_loaded {
+            log::info_with_category(
+                LogCategory::App,
+                "TFL data loaded, updating map layers"
+            );
+            
+            // Update the map with the TFL data
+            if let Some(manager) = window().and_then(|w| 
+                js_sys::Reflect::get(&w, &JsValue::from_str("mapInstance")).ok()
+            ) {
+                let map: crate::maplibre::bindings::Map = manager.clone().into();
+                
+                // We need to check if the map style is loaded
+                if map.is_style_loaded() {
+                    log::info_with_category(
+                        LogCategory::App,
+                        "Map style loaded, adding TFL data layers"
+                    );
+                    
+                    // Call a helper function to add the TFL data to the map
+                    add_tfl_data_to_map(&map, tfl_data.read().clone());
+                } else {
+                    log::info_with_category(
+                        LogCategory::App,
+                        "Map style not loaded yet, waiting for 'load' event"
+                    );
+                    
+                    // Create a callback for the 'load' event
+                    let tfl_data_clone = tfl_data.clone();
+                    let load_callback = Closure::wrap(Box::new(move || {
+                        log::info_with_category(
+                            LogCategory::App,
+                            "Map 'load' event fired, adding TFL data layers"
+                        );
+                        
+                        // If we get here via a callback, we need to get the map again
+                        if let Some(window) = window() {
+                            if let Ok(map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
+                                let map: crate::maplibre::bindings::Map = map_instance.into();
+                                add_tfl_data_to_map(&map, tfl_data_clone.read().clone());
+                            }
+                        }
+                    }) as Box<dyn FnMut()>);
+                    
+                    // Register the callback
+                    map.on("load", &load_callback);
+                    
+                    // Leak the callback to keep it alive
+                    load_callback.forget();
+                }
+            }
+        }
     });
 
     // Initialize simulation JS when app loads
@@ -272,4 +331,70 @@ pub fn app() -> Element {
             }
         }
     }
+}
+
+/// Helper function to add TFL data layers to an already initialized map
+fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRepository) {
+    use crate::utils::log::{self, LogCategory, with_context};
+    use crate::maplibre::helpers::{create_circle_layer, create_label_layer, create_line_layer};
+
+    with_context("add_tfl_data_to_map", LogCategory::Map, |logger| {
+        logger.info("Adding TFL data layers to map");
+
+        // Add all stations as a GeoJSON source
+        if let Ok(stations_geojson) = crate::data::stations_to_geojson(&tfl_data.stations) {
+            // Make sure the source doesn't already exist
+            if map.get_layer("tfl-stations-layer").is_none() {
+                logger.info(&format!("Adding {} stations to map", tfl_data.stations.len()));
+
+                // Add the source
+                web_sys::console::log_1(&stations_geojson);
+                map.add_source("tfl-stations", &stations_geojson);
+
+                // Add a circle layer for the stations
+                if let Ok(stations_layer) = create_circle_layer("tfl-stations-layer", "tfl-stations") {
+                    map.add_layer(&stations_layer);
+                    logger.debug("Added stations layer");
+                }
+
+                // Add a label layer for the stations
+                if let Ok(labels_layer) = create_label_layer("tfl-station-labels", "tfl-stations") {
+                    map.add_layer(&labels_layer);
+                    logger.debug("Added station labels layer");
+                }
+            } else {
+                logger.debug("Stations layer already exists, skipping");
+            }
+        } else {
+            logger.error("Failed to convert stations to GeoJSON");
+        }
+
+        // Add all tube lines
+        if let Ok(line_data) = crate::data::generate_all_line_data(&tfl_data) {
+            logger.info(&format!("Adding {} TFL lines to map", line_data.len()));
+
+            for (line_name, line_geojson, color) in line_data {
+                let source_id = format!("{}-line", line_name);
+                let layer_id = format!("{}-line-layer", line_name);
+
+                // Make sure the layer doesn't already exist
+                if map.get_layer(&layer_id).is_none() {
+                    // Add the source
+                    map.add_source(&source_id, &line_geojson);
+
+                    // Add the layer
+                    if let Ok(line_layer) = create_line_layer(&layer_id, &source_id, &color, 4.0) {
+                        map.add_layer(&line_layer);
+                        logger.debug(&format!("Added {} line", line_name));
+                    }
+                } else {
+                    logger.debug(&format!("{} line already exists, skipping", line_name));
+                }
+            }
+        } else {
+            logger.error("Failed to generate line data");
+        }
+
+        logger.info("TFL data layers added to map");
+    });
 }
