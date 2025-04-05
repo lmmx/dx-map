@@ -125,3 +125,234 @@ pub struct ResponseContext {
     pub response_latency: f64,
     pub query: String,
 }
+
+/// Represents a TfL route sequence with line information and stations
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RouteSequence {
+    /// Unique identifier for the line
+    #[serde(rename = "LineId")]
+    pub line_id: String,
+    /// Human-readable name of the line
+    #[serde(rename = "LineName")]
+    pub line_name: String,
+    /// Direction of the route (inbound/outbound)
+    #[serde(rename = "Direction")]
+    pub direction: String,
+    /// Whether this is an outbound-only route
+    #[serde(rename = "IsOutboundOnly")]
+    pub is_outbound_only: bool,
+    /// Transport mode (tube, bus, etc.)
+    #[serde(rename = "Mode")]
+    pub mode: String,
+    /// GeoJSON LineString representation of the route
+    #[serde(rename = "LineStrings")]
+    pub line_strings: Vec<String>,
+    /// Stations along this route
+    #[serde(rename = "Stations")]
+    pub stations: Vec<MatchedStop>,
+    /// Detailed stop point sequences
+    #[serde(rename = "StopPointSequences")]
+    #[serde(default)]
+    pub stop_point_sequences: Vec<StopPointSequence>,
+    /// Ordered line routes
+    #[serde(rename = "OrderedLineRoutes")]
+    #[serde(default)]
+    pub ordered_line_routes: Vec<OrderedRoute>,
+}
+
+/// Represents a stop point sequence for a line
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct StopPointSequence {
+    /// Unique identifier for the line
+    #[serde(rename = "LineId")]
+    pub line_id: String,
+    /// Human-readable name of the line
+    #[serde(rename = "LineName")]
+    pub line_name: String,
+    /// Direction of the sequence
+    #[serde(rename = "Direction")]
+    pub direction: String,
+    /// Branch identifier
+    #[serde(rename = "BranchId")]
+    pub branch_id: i32,
+    /// Next branch identifiers
+    #[serde(rename = "NextBranchIds")]
+    #[serde(default)]
+    pub next_branch_ids: Vec<i32>,
+    /// Previous branch identifiers
+    #[serde(rename = "PrevBranchIds")]
+    #[serde(default)]
+    pub prev_branch_ids: Vec<i32>,
+    /// Stop points in this sequence
+    #[serde(rename = "StopPoint")]
+    #[serde(default)]
+    pub stop_point: Vec<MatchedStop>,
+    /// Service type
+    #[serde(rename = "ServiceType")]
+    #[serde(default)]
+    pub service_type: Option<String>,
+}
+
+/// Represents a station stop on a route
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MatchedStop {
+    /// Route identifier
+    #[serde(rename = "RouteId")]
+    #[serde(default)]
+    pub route_id: Option<i32>,
+    /// Parent station identifier
+    #[serde(rename = "ParentId")]
+    #[serde(default)]
+    pub parent_id: Option<String>,
+    /// Station identifier
+    #[serde(rename = "StationId")]
+    #[serde(default)]
+    pub station_id: Option<String>,
+    /// ICS identifier
+    #[serde(rename = "IcsId")]
+    #[serde(default)]
+    pub ics_id: Option<String>,
+    /// Top-most parent identifier
+    #[serde(rename = "TopMostParentId")]
+    #[serde(default)]
+    pub top_most_parent_id: Option<String>,
+    /// Direction
+    #[serde(rename = "Direction")]
+    #[serde(default)]
+    pub direction: Option<String>,
+    /// Towards destination
+    #[serde(rename = "Towards")]
+    #[serde(default)]
+    pub towards: Option<String>,
+    /// Transport modes
+    #[serde(rename = "Modes")]
+    #[serde(default)]
+    pub modes: Vec<String>,
+    /// Stop type
+    #[serde(rename = "StopType")]
+    #[serde(default)]
+    pub stop_type: Option<String>,
+    /// Stop letter
+    #[serde(rename = "StopLetter")]
+    #[serde(default)]
+    pub stop_letter: Option<String>,
+    /// Fare zone
+    #[serde(rename = "Zone")]
+    #[serde(default)]
+    pub zone: Option<String>,
+    /// Accessibility summary
+    #[serde(rename = "AccessibilitySummary")]
+    #[serde(default)]
+    pub accessibility_summary: Option<String>,
+    /// Whether disruption is occurring
+    #[serde(rename = "HasDisruption")]
+    #[serde(default)]
+    pub has_disruption: Option<bool>,
+    /// Lines serving this stop
+    #[serde(rename = "Lines")]
+    #[serde(default)]
+    pub lines: Vec<LineIdentifier>,
+    /// Status
+    #[serde(rename = "Status")]
+    #[serde(default)]
+    pub status: Option<bool>,
+    /// Unique identifier
+    #[serde(rename = "Id")]
+    #[serde(default)]
+    pub id: Option<String>,
+    /// URL
+    #[serde(rename = "Url")]
+    #[serde(default)]
+    pub url: Option<String>,
+    /// Name of the stop
+    #[serde(rename = "Name")]
+    #[serde(default)]
+    pub name: Option<String>,
+    /// Latitude
+    #[serde(rename = "Lat")]
+    #[serde(default)]
+    pub lat: Option<f64>,
+    /// Longitude
+    #[serde(rename = "Lon")]
+    #[serde(default)]
+    pub lon: Option<f64>,
+}
+
+/// Represents a line identifier
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct LineIdentifier {
+    /// Unique identifier
+    #[serde(rename = "Id")]
+    pub id: String,
+    /// Name of the line
+    #[serde(rename = "Name")]
+    pub name: String,
+    /// URI
+    #[serde(rename = "Uri")]
+    #[serde(default)]
+    pub uri: Option<String>,
+    /// Full name
+    #[serde(rename = "FullName")]
+    #[serde(default)]
+    pub full_name: Option<String>,
+    /// Type
+    #[serde(rename = "Type")]
+    #[serde(default)]
+    pub type_name: Option<String>,
+    /// Crowding information (simplified to avoid complex nesting)
+    #[serde(rename = "Crowding")]
+    #[serde(default)]
+    pub crowding: Option<Crowding>,
+    /// Route type
+    #[serde(rename = "RouteType")]
+    #[serde(default)]
+    pub route_type: Option<String>,
+    /// Status
+    #[serde(rename = "Status")]
+    #[serde(default)]
+    pub status: Option<String>,
+}
+
+/// Simplified crowding information structure
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct Crowding {
+    /// Passenger flows (always empty in responses)
+    #[serde(rename = "PassengerFlows")]
+    #[serde(default)]
+    pub passenger_flows: Vec<serde_json::Value>,
+    /// Train loadings (always empty in responses)
+    #[serde(rename = "TrainLoadings")]
+    #[serde(default)]
+    pub train_loadings: Vec<serde_json::Value>,
+}
+
+/// Represents an ordered route
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct OrderedRoute {
+    /// Name of the route
+    #[serde(rename = "Name")]
+    pub name: String,
+    /// Naptan IDs for stops on this route
+    #[serde(rename = "NaptanIds")]
+    #[serde(default)]
+    pub naptan_ids: Vec<String>,
+    /// Service type
+    #[serde(rename = "ServiceType")]
+    #[serde(default)]
+    pub service_type: Option<String>,
+}
+
+/// Response structure for a single route
+#[derive(Debug, Deserialize)]
+pub struct RouteResponse {
+    pub context: ResponseContext,
+    pub success: bool,
+    pub results: Vec<RouteSequence>,
+}
+
+/// Structure for the combined routes file
+#[derive(Debug, Deserialize)]
+pub struct RoutesFile {
+    #[serde(flatten)]
+    pub routes: HashMap<String, HashMap<String, RouteResponse>>,
+}
