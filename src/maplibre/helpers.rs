@@ -191,8 +191,8 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
             transport_layers.push(&Layer::new(
                 "cable-car",
                 "Cable Car",
-                "london-cable-car-line-layer",
-                false,
+                "cable-car-route-layer",
+                true,
             ));
             transport_layers.push(&Layer::new("dlr", "DLR", "dlr-route-layer", true));
             transport_layers.push(&Layer::new("tram", "Tram", "tram-route-layer", true));
