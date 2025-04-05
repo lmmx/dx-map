@@ -139,24 +139,10 @@ impl LayerManager {
                 };
 
                 // Update tube layers
-                set_visibility("bakerloo-line-layer", layers.tube)?;
-                set_visibility("central-line-layer", layers.tube)?;
-                set_visibility("central-line-layer", layers.tube)?;
-                set_visibility("circle-line-layer", layers.tube)?;
-                set_visibility("district-line-layer", layers.tube)?;
                 set_visibility("dlr-line-layer", layers.tube)?;
-                set_visibility("elizabeth-line-layer", layers.tube)?;
-                set_visibility("hammersmith-city-line-layer", layers.tube)?;
-                set_visibility("jubilee-line-layer", layers.tube)?;
                 set_visibility("london-cable-car-line-layer", layers.tube)?;
-                set_visibility("metropolitan-line-layer", layers.tube)?;
-                set_visibility("northern-line-layer", layers.tube)?;
-                set_visibility("northern-line-layer", layers.tube)?;
-                set_visibility("piccadilly-line-layer", layers.tube)?;
                 set_visibility("thameslink-line-layer", layers.tube)?;
                 set_visibility("tram-line-layer", layers.tube)?;
-                set_visibility("victoria-line-layer", layers.tube)?;
-                set_visibility("waterloo-city-line-layer", layers.tube)?;
 
                 // Update overground layer
                 set_visibility("london-overground-line-layer", layers.tube)?;
