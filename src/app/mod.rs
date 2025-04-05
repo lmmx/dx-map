@@ -406,6 +406,7 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
             logger.error("Failed to convert stations to GeoJSON");
         }
 
+        // Commented out as this is deprecated: uncomment to see new lines before adding their routes
         // // Add all tube lines (NB this is being incrementally deprecated)
         // if let Ok(line_data) = crate::data::generate_all_line_data(&tfl_data) {
         //     logger.info(&format!("Adding {} TFL lines to map", line_data.len()));

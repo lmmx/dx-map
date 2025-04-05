@@ -210,7 +210,12 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
         // Infrastructure group
         {
             let infrastructure_layers = Array::new();
-            infrastructure_layers.push(&Layer::new("stations", "Stations", "tfl-stations-layer", true));
+            infrastructure_layers.push(&Layer::new(
+                "stations",
+                "Stations",
+                "tfl-stations-layer",
+                true,
+            ));
             infrastructure_layers.push(&Layer::new(
                 "station-labels",
                 "Station Labels",
