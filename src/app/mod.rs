@@ -381,7 +381,7 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
                 match line_name.as_str() {
                     "bakerloo" | "central" | "circle" | "district" | "hammersmith-city"
                     | "jubilee" | "metropolitan" | "northern" | "piccadilly" | "victoria"
-                    | "waterloo-city" | "elizabeth" | "thameslink" => {
+                    | "waterloo-city" | "elizabeth" | "thameslink" | "tram" | "dlr" => {
                         logger.debug(&format!(
                             "Skipping {} line - using route data instead",
                             line_name
