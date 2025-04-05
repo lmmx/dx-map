@@ -168,6 +168,13 @@ pub fn app() -> Element {
                     load_callback.forget();
                 }
             }
+
+            // Make the TfL data available to JavaScript for the simulation
+            let js_code = r#"
+                // Create a placeholder for TfL data
+                window.__tflData = true; // Simple flag to indicate data is available
+            "#;
+            let _ = js_sys::eval(js_code);
         }
     });
 
@@ -267,7 +274,7 @@ pub fn app() -> Element {
             logger.info("Exposing simulation functions");
 
             // Try to expose simulation functions if available
-            match simulation::expose_simulation_functions() {
+            match simulation::expose_simulation_functions(Some(tfl_data.read().clone())) {
                 Ok(_) => {
                     logger.info("Simulation functions exposed successfully");
                 }

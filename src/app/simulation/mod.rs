@@ -1,3 +1,5 @@
+use crate::app::simulation::model::build_routes_from_tfl_data;
+use crate::data::TflDataRepository;
 use crate::utils::log::{self, LogCategory, with_context};
 use js_sys::Object;
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
@@ -18,20 +20,25 @@ use state::{
 
 /// Expose initialization function globally
 // Expose Rust functions to JavaScript
-pub fn expose_simulation_functions() -> Result<(), JsValue> {
+pub fn expose_simulation_functions(tfl_data: Option<TflDataRepository>) -> Result<(), JsValue> {
     with_context(
         "expose_simulation_functions",
         LogCategory::Simulation,
         |logger| {
             logger.info("Exposing simulation functions to JavaScript");
 
+            // Clone tfl_data so the closure can be called more than once.
+            let tfl_data_for_closure = tfl_data.clone();
             // Create initialize function
-            let init_closure = Closure::wrap(Box::new(|| {
-                log::info_with_category(
-                    LogCategory::Simulation,
-                    "rust_initialize_simulation called from JS",
-                );
-                initialize_simulation();
+            let init_closure = Closure::wrap(Box::new({
+                let tfl_data_inner = tfl_data_for_closure;
+                move || {
+                    log::info_with_category(
+                        LogCategory::Simulation,
+                        "rust_initialize_simulation called from JS",
+                    );
+                    initialize_simulation(tfl_data_inner.clone());
+                }
             }) as Box<dyn FnMut()>);
 
             // Create toggle function
@@ -43,13 +50,18 @@ pub fn expose_simulation_functions() -> Result<(), JsValue> {
                 toggle_simulation();
             }) as Box<dyn FnMut()>);
 
+            // Clone tfl_data for reset closure too
+            let tfl_data_for_reset = tfl_data.clone();
             // Create reset function
-            let reset_closure = Closure::wrap(Box::new(|| {
-                log::info_with_category(
-                    LogCategory::Simulation,
-                    "rust_reset_simulation called from JS",
-                );
-                reset_simulation();
+            let reset_closure = Closure::wrap(Box::new({
+                let tfl_data_inner = tfl_data_for_reset;
+                move || {
+                        log::info_with_category(
+                        LogCategory::Simulation,
+                        "rust_reset_simulation called from JS",
+                    );
+                    reset_simulation(tfl_data_inner.clone());
+                }
             }) as Box<dyn FnMut()>);
 
             // Set them on the window object
@@ -92,7 +104,7 @@ pub fn expose_simulation_functions() -> Result<(), JsValue> {
 // -------------------
 
 /// Initialize the vehicle simulation
-fn initialize_simulation() {
+fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
     with_context("initialize_simulation", LogCategory::Simulation, |logger| {
         logger.info("Initializing vehicle simulation...");
 
@@ -103,8 +115,14 @@ fn initialize_simulation() {
         "#;
         let _ = js_sys::eval(js_code);
 
-        // Build routes
-        let routes = build_sample_routes();
+        // Build routes from real TfL data if available, otherwise use sample routes
+        let routes = match tfl_data {
+            Some(repo) => build_routes_from_tfl_data(&repo),
+            None => {
+                logger.warn("No TfL data provided, using sample routes");
+                build_sample_routes()
+            }
+        };
 
         // Initialize vehicles on those routes
         let vehicles = initialize_vehicles(&routes);
@@ -485,7 +503,7 @@ fn toggle_simulation() {
 }
 
 /// Reset the simulation
-fn reset_simulation() {
+fn reset_simulation(tfl_data: Option<TflDataRepository>) {
     with_context("reset_simulation", LogCategory::Simulation, |logger| {
         logger.info("Resetting simulation...");
 
@@ -502,10 +520,8 @@ fn reset_simulation() {
 
         // Reset state and recreate everything
         logger.debug("Re-initializing simulation from scratch");
-        initialize_simulation();
+        initialize_simulation(tfl_data);
 
         logger.info("Simulation reset complete");
     })
 }
-
-// The debug_simulation_state function has been moved to the state module

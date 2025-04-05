@@ -1,3 +1,5 @@
+use crate::data::TflDataRepository;
+use crate::utils::log::{LogCategory, warn_with_category};
 use js_sys::Math;
 
 #[derive(Clone, Debug)]
@@ -127,6 +129,62 @@ pub fn build_sample_routes() -> Vec<Route> {
             (0.0550, 51.4905),  // Canning Town
         ],
     });
+
+    routes
+}
+
+/// Build actual routes from TfL data repository
+pub fn build_routes_from_tfl_data(tfl_data: &TflDataRepository) -> Vec<Route> {
+    let mut routes = Vec::new();
+    let mut route_id = 0;
+
+    // Process each line with route geometries
+    for (line_id, geometries) in &tfl_data.route_geometries {
+        if geometries.is_empty() {
+            continue;
+        }
+
+        // Determine vehicle type based on line ID
+        let vehicle_type = match line_id.as_str() {
+            "bakerloo" | "central" | "circle" | "district" | "hammersmith-city" | "jubilee"
+            | "metropolitan" | "northern" | "piccadilly" | "victoria" | "waterloo-city"
+            | "elizabeth" | "dlr" => VehicleType::Train,
+            _ => VehicleType::Bus,
+        };
+
+        // Process each route segment for this line
+        for (segment_idx, coordinates) in geometries.iter().enumerate() {
+            // Skip segments with too few coordinates
+            if coordinates.len() < 2 {
+                continue;
+            }
+
+            // Convert coordinates from [f64; 2] to stations format (f64, f64)
+            let mut stations = Vec::new();
+            for coord in coordinates {
+                stations.push((coord[0], coord[1])); // lng, lat
+            }
+
+            // Create a route from this geometry
+            routes.push(Route {
+                id: route_id,
+                name: format!("{} (segment {})", line_id, segment_idx),
+                vehicle_type: vehicle_type.clone(),
+                stations,
+            });
+
+            route_id += 1;
+        }
+    }
+
+    // If no routes were created, fall back to sample routes
+    if routes.is_empty() {
+        warn_with_category(
+            LogCategory::Simulation,
+            "No valid routes found in TfL data, using sample routes",
+        );
+        return build_sample_routes();
+    }
 
     routes
 }
