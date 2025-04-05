@@ -164,7 +164,7 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
                 "london-cable-car-line-layer",
                 false,
             ));
-            transport_layers.push(&Layer::new("dlr", "DLR", "dlr-line-layer", false));
+            transport_layers.push(&Layer::new("dlr", "DLR", "dlr-route-layer", true));
             transport_layers.push(&Layer::new("tram", "Tram", "tram-route-layer", true));
             transport_layers.push(&Layer::new(
                 "thameslink",

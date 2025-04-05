@@ -139,7 +139,6 @@ impl LayerManager {
                 };
 
                 // Update tube layers
-                set_visibility("dlr-line-layer", layers.tube)?;
                 set_visibility("london-cable-car-line-layer", layers.tube)?;
 
                 // Update overground layer
