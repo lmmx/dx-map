@@ -55,6 +55,9 @@ pub async fn load_stations() -> Result<Vec<Station>, String> {
     // Parse the JSON
     match serde_json::from_str::<StationsResponse>(&text) {
         Ok(response) => {
+            if !response.success {
+                return Err("Stations response was unsuccessful".to_string());
+            }
             log::info_with_category(
                 LogCategory::App,
                 &format!("Successfully loaded {} stations", response.results.len()),
@@ -113,6 +116,9 @@ pub async fn load_platforms() -> Result<Vec<Platform>, String> {
     // Parse the JSON
     match serde_json::from_str::<PlatformsResponse>(&text) {
         Ok(response) => {
+            if !response.success {
+                return Err("Platforms response was unsuccessful".to_string());
+            }
             log::info_with_category(
                 LogCategory::App,
                 &format!("Successfully loaded {} platforms", response.results.len()),
@@ -209,7 +215,15 @@ pub async fn load_routes() -> Result<HashMap<String, HashMap<String, Vec<RouteSe
 
                 // Process each direction
                 for (direction, response) in directions {
-                    direction_map.insert(direction, response.results);
+                    if response.success {
+                        direction_map.insert(direction, response.results);
+                    } else {
+                        // Error out immediately (a failed response shouldn't have been stored)
+                        return Err(format!(
+                            "Unsuccessful response record for line {}, direction {}",
+                            line_id, direction
+                        ));
+                    }
                 }
 
                 routes_map.insert(line_id, direction_map);

@@ -105,7 +105,7 @@ pub struct Platform {
 /// Response structure from the stations API
 #[derive(Debug, Deserialize)]
 pub struct StationsResponse {
-    pub context: ResponseContext,
+    // pub context: ResponseContext,
     pub success: bool,
     pub results: Vec<Station>,
 }
@@ -113,19 +113,19 @@ pub struct StationsResponse {
 /// Response structure from the platforms API
 #[derive(Debug, Deserialize)]
 pub struct PlatformsResponse {
-    pub context: ResponseContext,
+    // pub context: ResponseContext,
     pub success: bool,
     pub results: Vec<Platform>,
 }
 
-/// Context information included in API responses
-#[derive(Debug, Deserialize)]
-pub struct ResponseContext {
-    pub request_time: String,
-    pub response_time: String,
-    pub response_latency: f64,
-    pub query: String,
-}
+// /// Context information included in API responses
+// #[derive(Debug, Deserialize)]
+// pub struct ResponseContext {
+//     pub request_time: String,
+//     pub response_time: String,
+//     pub response_latency: f64,
+//     pub query: String,
+// }
 
 /// Represents a TfL route sequence with line information and stations
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -346,7 +346,7 @@ pub struct OrderedRoute {
 /// Response structure for a single route
 #[derive(Debug, Deserialize)]
 pub struct RouteResponse {
-    pub context: ResponseContext,
+    // pub context: ResponseContext,
     pub success: bool,
     pub results: Vec<RouteSequence>,
 }
