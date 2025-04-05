@@ -7,6 +7,7 @@ use web_sys::Response;
 // Define asset paths for our data files
 const STATIONS_JSON_PATH: Asset = asset!("/assets/data/stations.json");
 const PLATFORMS_JSON_PATH: Asset = asset!("/assets/data/platforms.json");
+const ROUTES_JSON_PATH: Asset = asset!("/assets/data/platforms.json");
 
 /// Load stations from the JSON data file using fetch
 pub async fn load_stations() -> Result<Vec<Station>, String> {
