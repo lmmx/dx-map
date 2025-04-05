@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use crate::data::model::{RoutesFile, RouteSequence};
 use super::model::{Platform, PlatformsResponse, Station, StationsResponse};
 use crate::utils::log::{self, LogCategory};
 use dioxus::prelude::*;
@@ -7,7 +9,7 @@ use web_sys::Response;
 // Define asset paths for our data files
 const STATIONS_JSON_PATH: Asset = asset!("/assets/data/stations.json");
 const PLATFORMS_JSON_PATH: Asset = asset!("/assets/data/platforms.json");
-const ROUTES_JSON_PATH: Asset = asset!("/assets/data/platforms.json");
+const ROUTES_JSON_PATH: Asset = asset!("/assets/data/routes.json");
 
 /// Load stations from the JSON data file using fetch
 pub async fn load_stations() -> Result<Vec<Station>, String> {

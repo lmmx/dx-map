@@ -398,6 +398,58 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
             logger.error("Failed to generate line data");
         }
 
+        // Add route geometries from our new data
+        if let Ok(route_data) = crate::data::generate_all_route_geometries(&tfl_data) {
+            logger.info(&format!("Adding {} TFL route geometries to map", route_data.len()));
+
+            for (line_id, route_geojson) in route_data {
+                let source_id = format!("{}-route", line_id);
+                let layer_id = format!("{}-route-layer", line_id);
+
+                // Make sure the layer doesn't already exist
+                if map.get_layer(&layer_id).is_none() {
+                    // Add the source
+                    map.add_source(&source_id, &route_geojson);
+
+                    // Get the appropriate color for this line
+                    let color = get_line_color(&line_id);
+
+                    // Add the layer with a dashed style to distinguish from simplified line data
+                    if let Ok(route_layer) = create_line_layer(&layer_id, &source_id, &color, 3.0) {
+                        map.add_layer(&route_layer);
+                        logger.debug(&format!("Added {} route geometry", line_id));
+                    }
+                } else {
+                    logger.debug(&format!("{} route layer already exists, skipping", line_id));
+                }
+            }
+        } else {
+            logger.error("Failed to generate route geometries");
+        }
+
         logger.info("TFL data layers added to map");
     });
+}
+
+/// Helper function to get the color for a specific TfL line
+fn get_line_color(line_id: &str) -> String {
+    match line_id {
+        "bakerloo" => "#B36305",
+        "central" => "#E32017",
+        "circle" => "#FFD300",
+        "district" => "#00782A",
+        "hammersmith-city" => "#F3A9BB",
+        "jubilee" => "#A0A5A9",
+        "metropolitan" => "#9B0056",
+        "northern" => "#000000",
+        "piccadilly" => "#003688",
+        "victoria" => "#0098D4",
+        "waterloo-city" => "#95CDBA",
+        "dlr" => "#00A4A7",
+        "london-overground" => "#EE7C0E",
+        "elizabeth" => "#6950A1",
+        "tram" => "#84B817",
+        "cable-car" => "#E21836",
+        _ => "#777777",  // Default gray for unknown lines
+    }.to_string()
 }
