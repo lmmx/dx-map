@@ -3,7 +3,6 @@ use crate::data::TflDataRepository;
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
 use serde::Serialize;
-use serde_json::json;
 use std::collections::HashMap;
 use wasm_bindgen::{JsError, JsValue};
 
@@ -281,7 +280,9 @@ pub fn get_line_color(line_name: &str) -> &'static str {
     }
 }
 
+// Not used: left in for debugging (if there's a new line without routes, uncomment use in app/mod.rs)
 /// Generate all line data for MapLibre
+#[allow(dead_code)]
 pub fn generate_all_line_data(
     repository: &super::TflDataRepository,
 ) -> Result<Vec<(String, JsValue, String)>, JsValue> {
