@@ -401,7 +401,10 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
 
         // Add route geometries from our new data
         if let Ok(route_data) = crate::data::generate_all_route_geometries(&tfl_data) {
-            logger.info(&format!("Adding {} TFL route geometries to map", route_data.len()));
+            logger.info(&format!(
+                "Adding {} TFL route geometries to map",
+                route_data.len()
+            ));
 
             for (line_id, route_geojson) in route_data {
                 logger.debug(&format!("Adding {} route geometry", line_id));
@@ -453,6 +456,7 @@ fn get_line_color(line_id: &str) -> String {
         "elizabeth" => "#6950A1",
         "tram" => "#84B817",
         "cable-car" => "#E21836",
-        _ => "#777777",  // Default gray for unknown lines
-    }.to_string()
+        _ => "#777777", // Default gray for unknown lines
+    }
+    .to_string()
 }

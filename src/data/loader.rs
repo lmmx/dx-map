@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-use crate::data::model::{RoutesFile, RouteSequence};
 use super::model::{Platform, PlatformsResponse, Station, StationsResponse};
+use crate::data::model::{RouteSequence, RoutesFile};
 use crate::utils::log::{self, LogCategory};
 use dioxus::prelude::*;
+use std::collections::HashMap;
 use wasm_bindgen::JsCast;
 use web_sys::Response;
 
@@ -200,25 +200,26 @@ pub async fn load_routes() -> Result<HashMap<String, HashMap<String, Vec<RouteSe
     match serde_json::from_str::<RoutesFile>(&text) {
         Ok(routes_file) => {
             // Convert the nested HashMap to our desired format
-            let mut routes_map: HashMap<String, HashMap<String, Vec<RouteSequence>>> = HashMap::new();
-            
+            let mut routes_map: HashMap<String, HashMap<String, Vec<RouteSequence>>> =
+                HashMap::new();
+
             // Process each line and its directions
             for (line_id, directions) in routes_file.routes {
                 let mut direction_map: HashMap<String, Vec<RouteSequence>> = HashMap::new();
-                
+
                 // Process each direction
                 for (direction, response) in directions {
                     direction_map.insert(direction, response.results);
                 }
-                
+
                 routes_map.insert(line_id, direction_map);
             }
-            
+
             log::info_with_category(
                 LogCategory::App,
                 &format!("Successfully loaded routes for {} lines", routes_map.len()),
             );
-            
+
             Ok(routes_map)
         }
         Err(e) => {
@@ -234,10 +235,10 @@ pub fn process_route_geometries(
     routes: &HashMap<String, HashMap<String, Vec<RouteSequence>>>,
 ) -> HashMap<String, Vec<Vec<[f64; 2]>>> {
     let mut line_geometries: HashMap<String, Vec<Vec<[f64; 2]>>> = HashMap::new();
-    
+
     for (line_id, directions) in routes {
         let mut geometries = Vec::new();
-        
+
         // Process both inbound and outbound directions
         for (_, route_sequences) in directions {
             for sequence in route_sequences {
@@ -249,13 +250,13 @@ pub fn process_route_geometries(
                 }
             }
         }
-        
+
         // Only add if we have valid geometries
         if !geometries.is_empty() {
             line_geometries.insert(line_id.clone(), geometries);
         }
     }
-    
+
     line_geometries
 }
 
@@ -263,28 +264,31 @@ pub fn process_route_geometries(
 fn parse_line_string(line_string: &str) -> Result<Vec<[f64; 2]>, String> {
     // The LineString format is like: "[[[-0.335217,51.592268],[-0.31691,51.581756],[-0.308433,51.570232]]]"
     // We need to parse this and extract the coordinates
-    
+
     // First, remove outer brackets and any whitespace
-    let trimmed = line_string.trim().trim_start_matches('[').trim_end_matches(']');
-    
+    let trimmed = line_string
+        .trim()
+        .trim_start_matches('[')
+        .trim_end_matches(']');
+
     // Now parse the inner arrays
     let mut coordinates = Vec::new();
-    
+
     // Simple parser for this specific format
     // Using regex or a proper JSON parser would be more robust
     let parts: Vec<&str> = trimmed.split("],[").collect();
-    
+
     for part in parts {
         let clean_part = part.trim_start_matches('[').trim_end_matches(']');
         let coords: Vec<&str> = clean_part.split(',').collect();
-        
+
         if coords.len() == 2 {
             if let (Ok(lon), Ok(lat)) = (coords[0].parse::<f64>(), coords[1].parse::<f64>()) {
                 coordinates.push([lon, lat]);
             }
         }
     }
-    
+
     if coordinates.is_empty() {
         Err("Failed to parse any coordinates from LineString".to_string())
     } else {

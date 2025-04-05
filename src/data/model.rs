@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 // From the TfL topology data model, as recorded here:
 // https://github.com/lmmx/tubeulator/blob/a8fc10becac3ea04cf16b91b0c24be944df692a5/src/tubeulator/topology/data_model.py

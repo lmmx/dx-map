@@ -1,11 +1,11 @@
 use super::model::{Platform, Station};
-use serde_json::json;
-use serde::Serialize;
 use crate::data::TflDataRepository;
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
+use serde::Serialize;
+use serde_json::json;
 use std::collections::HashMap;
-use wasm_bindgen::{JsValue, JsError};
+use wasm_bindgen::{JsError, JsValue};
 
 /// GeoJSON source specification
 #[derive(Debug, Serialize)]
@@ -375,7 +375,10 @@ pub fn route_geometries_to_geojson(
     // Convert to JsValue
     match geo_json_source.serialize(&ser) {
         Ok(js_value) => Ok(js_value),
-        Err(err) => Err(JsError::new(&format!("Failed to serialize GeoJSON: {:?}", err))),
+        Err(err) => Err(JsError::new(&format!(
+            "Failed to serialize GeoJSON: {:?}",
+            err
+        ))),
     }
 }
 

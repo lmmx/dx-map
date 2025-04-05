@@ -3,7 +3,10 @@ pub mod map_helpers;
 pub mod model;
 
 // Re-export commonly used items
-pub use map_helpers::{generate_all_line_data, generate_all_route_geometries, route_geometries_to_geojson, stations_to_geojson};
+pub use map_helpers::{
+    generate_all_line_data, generate_all_route_geometries, route_geometries_to_geojson,
+    stations_to_geojson,
+};
 
 use crate::utils::log::{self, LogCategory};
 use std::collections::HashMap;
