@@ -67,57 +67,57 @@ impl TflDataRepository {
         })
     }
 
-    /// Get a station by its unique ID
-    pub fn get_station(&self, station_id: &str) -> Option<&model::Station> {
-        self.station_by_id.get(station_id)
-    }
+    // /// Get a station by its unique ID
+    // pub fn get_station(&self, station_id: &str) -> Option<&model::Station> {
+    //     self.station_by_id.get(station_id)
+    // }
 
-    /// Get platforms for a specific station
-    pub fn get_platforms_for_station(&self, station_id: &str) -> Vec<&model::Platform> {
-        match self.platforms_by_station.get(station_id) {
-            Some(platforms) => platforms.iter().collect(),
-            None => Vec::new(),
-        }
-    }
+    // /// Get platforms for a specific station
+    // pub fn get_platforms_for_station(&self, station_id: &str) -> Vec<&model::Platform> {
+    //     match self.platforms_by_station.get(station_id) {
+    //         Some(platforms) => platforms.iter().collect(),
+    //         None => Vec::new(),
+    //     }
+    // }
 
-    /// Get all stations for a specific line
-    pub fn get_stations_for_line(&self, line_name: &str) -> Vec<&model::Station> {
-        let mut result = Vec::new();
+    // /// Get all stations for a specific line
+    // pub fn get_stations_for_line(&self, line_name: &str) -> Vec<&model::Station> {
+    //     let mut result = Vec::new();
 
-        // Check each station's platforms to see if any serve this line
-        for (station_id, platforms) in &self.platforms_by_station {
-            let serves_line = platforms.iter().any(|p| p.line == line_name);
+    //     // Check each station's platforms to see if any serve this line
+    //     for (station_id, platforms) in &self.platforms_by_station {
+    //         let serves_line = platforms.iter().any(|p| p.line == line_name);
 
-            if serves_line {
-                if let Some(station) = self.station_by_id.get(station_id) {
-                    result.push(station);
-                }
-            }
-        }
+    //         if serves_line {
+    //             if let Some(station) = self.station_by_id.get(station_id) {
+    //                 result.push(station);
+    //             }
+    //         }
+    //     }
 
-        result
-    }
+    //     result
+    // }
 
-    /// Get all route sequences for a specific line
-    pub fn get_routes_for_line(&self, line_id: &str) -> Vec<&model::RouteSequence> {
-        let mut result = Vec::new();
+    // /// Get all route sequences for a specific line
+    // pub fn get_routes_for_line(&self, line_id: &str) -> Vec<&model::RouteSequence> {
+    //     let mut result = Vec::new();
 
-        if let Some(directions) = self.routes.get(line_id) {
-            for (_, sequences) in directions {
-                for sequence in sequences {
-                    result.push(sequence);
-                }
-            }
-        }
+    //     if let Some(directions) = self.routes.get(line_id) {
+    //         for (_, sequences) in directions {
+    //             for sequence in sequences {
+    //                 result.push(sequence);
+    //             }
+    //         }
+    //     }
 
-        result
-    }
+    //     result
+    // }
 
-    /// Get route geometries for a specific line
-    pub fn get_route_geometries_for_line(&self, line_id: &str) -> Vec<Vec<[f64; 2]>> {
-        match self.route_geometries.get(line_id) {
-            Some(geometries) => geometries.clone(),
-            None => Vec::new(),
-        }
-    }
+    // /// Get route geometries for a specific line
+    // pub fn get_route_geometries_for_line(&self, line_id: &str) -> Vec<Vec<[f64; 2]>> {
+    //     match self.route_geometries.get(line_id) {
+    //         Some(geometries) => geometries.clone(),
+    //         None => Vec::new(),
+    //     }
+    // }
 }
