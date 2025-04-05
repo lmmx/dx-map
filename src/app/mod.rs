@@ -61,7 +61,7 @@ impl Default for TflLayers {
             dlr: true,
             elizabeth_line: true,
             buses: false,
-            trams: false,
+            trams: true,
             cable_car: true,
             stations: true,
             depots: false,
@@ -381,7 +381,7 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
                 match line_name.as_str() {
                     "bakerloo" | "central" | "circle" | "district" | "hammersmith-city"
                     | "jubilee" | "metropolitan" | "northern" | "piccadilly" | "victoria"
-                    | "waterloo-city" | "elizabeth" => {
+                    | "waterloo-city" | "elizabeth" | "thameslink" => {
                         logger.debug(&format!(
                             "Skipping {} line - using route data instead",
                             line_name
@@ -475,6 +475,7 @@ fn get_line_color(line_id: &str) -> String {
         "elizabeth" => "#6950A1",
         "tram" => "#84B817",
         "cable-car" => "#E21836",
+        "thameslink" => "#C1007C",
         _ => "#777777", // Default gray for unknown lines
     }
     .to_string()

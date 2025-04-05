@@ -44,12 +44,12 @@ pub fn create_map_options(container_id: &str) -> Result<JsValue, JsValue> {
         let bounds = Array::new();
         let sw = Array::new();
         sw.push(&JsValue::from_f64(-1.0)); // Westernmost (Reading)
-        sw.push(&JsValue::from_f64(51.3)); // Southernmost (Coulsdon South)
+        sw.push(&JsValue::from_f64(50.8)); // Southernmost (Coulsdon South)
         bounds.push(&sw);
 
         let ne = Array::new();
-        ne.push(&JsValue::from_f64(0.346)); // Easternmost (Shenfield)
-        ne.push(&JsValue::from_f64(51.72)); // Northernmost (Cheshunt)
+        ne.push(&JsValue::from_f64(0.7)); // Easternmost (Shenfield)
+        ne.push(&JsValue::from_f64(52.6)); // Northernmost (Peterborough)
         bounds.push(&ne);
 
         Reflect::set(&options, &JsValue::from_str("maxBounds"), &bounds)?;
@@ -165,12 +165,12 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
                 false,
             ));
             transport_layers.push(&Layer::new("dlr", "DLR", "dlr-line-layer", false));
-            transport_layers.push(&Layer::new("tram", "Tram", "tram-line-layer", false));
+            transport_layers.push(&Layer::new("tram", "Tram", "tram-route-layer", true));
             transport_layers.push(&Layer::new(
                 "thameslink",
                 "Thameslink",
-                "thameslink-line-layer",
-                false,
+                "thameslink-route-layer",
+                true,
             ));
 
             let transport_group = LayerGroup::new("Transport", &transport_layers);
