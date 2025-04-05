@@ -402,6 +402,8 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
                     // Add the layer
                     if let Ok(line_layer) = create_line_layer(&layer_id, &source_id, &color, 4.0) {
                         map.add_layer(&line_layer);
+                        // Anything set this way is invisible (so as to deprecate as we migratet to routes)
+                        map.set_layout_property(&layer_id, "visibility", &JsValue::from_str("none"));
                         logger.debug(&format!("Added {} line", line_name));
                     }
                 } else {

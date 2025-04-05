@@ -33,6 +33,13 @@ class LayerSwitcher {
 
     // Append to document body for positioning
     document.body.appendChild(this._container);
+    // Store instance for retrieval
+    LayerSwitcher._instance = this;
+  }
+
+  // Add a static method to get the instance
+  static getInstance() {
+    return LayerSwitcher._instance;
   }
 
   // Extract flat list of layers from layer groups
@@ -104,9 +111,11 @@ class LayerSwitcher {
 
     // Initialize visibility when the style is loaded
     if (map.isStyleLoaded()) {
+      console.log("LAYER SWITCHER ADDING AS MAP STYLE LOADED")
       this._updateVisibility();
     } else {
       map.on('load', () => {
+        console.log("LAYER SWITCHER ADDING AS MAP LOADED")
         this._updateVisibility();
       });
     }
@@ -222,6 +231,8 @@ class LayerGroup {
     this.layers = layers;
   }
 }
+
+LayerSwitcher._instance = null;
 
 // Export the control constructor and helper classes
 window.LayerSwitcher = LayerSwitcher;

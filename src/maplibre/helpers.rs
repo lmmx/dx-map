@@ -149,28 +149,28 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
                 "tube-elizabeth",
                 "Elizabeth Line",
                 "elizabeth-line-layer",
-                true,
+                false,
             ));
             // Non-tube
             transport_layers.push(&Layer::new(
                 "overground",
                 "Overground",
                 "london-overground-line-layer",
-                true,
+                false,
             ));
             transport_layers.push(&Layer::new(
                 "cable-car",
                 "Cable Car",
                 "london-cable-car-line-layer",
-                true,
+                false,
             ));
-            transport_layers.push(&Layer::new("dlr", "DLR", "dlr-line-layer", true));
-            transport_layers.push(&Layer::new("tram", "Tram", "tram-line-layer", true));
+            transport_layers.push(&Layer::new("dlr", "DLR", "dlr-line-layer", false));
+            transport_layers.push(&Layer::new("tram", "Tram", "tram-line-layer", false));
             transport_layers.push(&Layer::new(
                 "thameslink",
                 "Thameslink",
                 "thameslink-line-layer",
-                true,
+                false,
             ));
 
             let transport_group = LayerGroup::new("Transport", &transport_layers);
