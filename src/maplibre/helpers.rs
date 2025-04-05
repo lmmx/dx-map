@@ -148,8 +148,8 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
             transport_layers.push(&Layer::new(
                 "tube-elizabeth",
                 "Elizabeth Line",
-                "elizabeth-line-layer",
-                false,
+                "elizabeth-route-layer",
+                true,
             ));
             // Non-tube
             transport_layers.push(&Layer::new(
