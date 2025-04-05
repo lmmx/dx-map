@@ -2,7 +2,7 @@ use super::model::{Platform, Station};
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
 use std::collections::HashMap;
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{JsValue, JsError};
 
 /// Convert a list of stations into a format suitable for MapLibre GeoJSON
 pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
@@ -287,6 +287,78 @@ pub fn generate_all_line_data(
         LogCategory::Map,
         &format!("Generated data for {} TfL lines", result.len()),
     );
+
+    Ok(result)
+}
+
+/// Convert route geometries for a specific line to GeoJSON
+pub fn route_geometries_to_geojson(
+    line_id: &str,
+    geometries: &Vec<Vec<[f64; 2]>>,
+) -> Result<JsValue, JsError> {
+    let mut features = Vec::new();
+
+    // Process each route segment
+    for (i, coordinates) in geometries.iter().enumerate() {
+        // Skip empty geometries
+        if coordinates.is_empty() {
+            continue;
+        }
+
+        // Create a GeoJSON LineString feature
+        let geometry = json!({
+            "type": "LineString",
+            "coordinates": coordinates
+        });
+
+        let feature = json!({
+            "type": "Feature",
+            "geometry": geometry,
+            "properties": {
+                "line_id": line_id,
+                "segment_id": i
+            }
+        });
+
+        features.push(feature);
+    }
+
+    // Create the FeatureCollection
+    let feature_collection = json!({
+        "type": "FeatureCollection",
+        "features": features
+    });
+
+    // Convert to JsValue
+    let js_value = JsValue::from_str(&feature_collection.to_string());
+    Ok(js_value)
+}
+
+/// Generate all route geometries as GeoJSON for multiple lines
+pub fn generate_all_route_geometries(
+    tfl_data: &TflDataRepository,
+) -> Result<Vec<(String, JsValue)>, JsError> {
+    let mut result = Vec::new();
+
+    // Process each line
+    for (line_id, geometries) in &tfl_data.route_geometries {
+        // Skip lines with no geometries
+        if geometries.is_empty() {
+            continue;
+        }
+
+        match route_geometries_to_geojson(line_id, geometries) {
+            Ok(geojson) => {
+                result.push((line_id.clone(), geojson));
+            }
+            Err(err) => {
+                log::error_with_category(
+                    LogCategory::Map,
+                    &format!("Failed to convert route to GeoJSON: {:?}", err),
+                );
+            }
+        }
+    }
 
     Ok(result)
 }
