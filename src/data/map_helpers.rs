@@ -1,8 +1,47 @@
 use super::model::{Platform, Station};
+use crate::data::TflDataRepository;
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
+use serde::Serialize;
+use serde_json::json;
 use std::collections::HashMap;
-use wasm_bindgen::JsValue;
+use wasm_bindgen::{JsError, JsValue};
+
+/// GeoJSON source specification
+#[derive(Debug, Serialize)]
+pub struct GeoJsonSourceSpec {
+    pub r#type: String,
+    pub data: FeatureCollection,
+}
+
+/// GeoJSON FeatureCollection
+#[derive(Debug, Serialize)]
+pub struct FeatureCollection {
+    pub r#type: String,
+    pub features: Vec<Feature>,
+}
+
+/// GeoJSON Feature
+#[derive(Debug, Serialize)]
+pub struct Feature {
+    pub r#type: String,
+    pub geometry: FeatureGeometry,
+    pub properties: FeatureProperties,
+}
+
+/// GeoJSON Geometry
+#[derive(Debug, Serialize)]
+pub struct FeatureGeometry {
+    pub r#type: String,
+    pub coordinates: Vec<[f64; 2]>,
+}
+
+/// GeoJSON Properties
+#[derive(Debug, Serialize)]
+pub struct FeatureProperties {
+    pub line_id: String,
+    pub segment_id: usize,
+}
 
 /// Convert a list of stations into a format suitable for MapLibre GeoJSON
 pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
@@ -287,6 +326,87 @@ pub fn generate_all_line_data(
         LogCategory::Map,
         &format!("Generated data for {} TfL lines", result.len()),
     );
+
+    Ok(result)
+}
+
+/// Convert route geometries for a specific line to GeoJSON
+pub fn route_geometries_to_geojson(
+    line_id: &str,
+    geometries: &Vec<Vec<[f64; 2]>>,
+) -> Result<JsValue, JsError> {
+    let mut features = Vec::new();
+
+    // Process each route segment
+    for (i, coordinates) in geometries.iter().enumerate() {
+        // Skip empty geometries
+        if coordinates.is_empty() {
+            continue;
+        }
+
+        // Create a GeoJSON LineString feature
+        let feature = Feature {
+            r#type: "Feature".to_string(),
+            geometry: FeatureGeometry {
+                r#type: "LineString".to_string(),
+                coordinates: coordinates.clone(),
+            },
+            properties: FeatureProperties {
+                line_id: line_id.to_string(),
+                segment_id: i,
+            },
+        };
+
+        features.push(feature);
+    }
+
+    // Create the GeoJSON source using our structs
+    let geo_json_source = GeoJsonSourceSpec {
+        r#type: "geojson".to_string(),
+        data: FeatureCollection {
+            r#type: "FeatureCollection".to_string(),
+            features,
+        },
+    };
+
+    // Configure the serializer to serialize maps as objects
+    let ser = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
+
+    // Convert to JsValue
+    match geo_json_source.serialize(&ser) {
+        Ok(js_value) => Ok(js_value),
+        Err(err) => Err(JsError::new(&format!(
+            "Failed to serialize GeoJSON: {:?}",
+            err
+        ))),
+    }
+}
+
+/// Generate all route geometries as GeoJSON for multiple lines
+pub fn generate_all_route_geometries(
+    tfl_data: &TflDataRepository,
+) -> Result<Vec<(String, JsValue)>, JsError> {
+    let mut result = Vec::new();
+
+    // Process each line
+    for (line_id, geometries) in &tfl_data.route_geometries {
+        // Skip lines with no geometries
+        if geometries.is_empty() {
+            continue;
+        }
+
+        match route_geometries_to_geojson(line_id, geometries) {
+            Ok(geojson) => {
+                result.push((line_id.clone(), geojson));
+            }
+            Err(err) => {
+                log::error_with_category(
+                    LogCategory::Map,
+                    &format!("Failed to convert route to GeoJSON: {:?}", err),
+                );
+            }
+        }
+    }
 
     Ok(result)
 }

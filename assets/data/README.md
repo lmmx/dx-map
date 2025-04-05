@@ -8,3 +8,16 @@ be relatively stable over time.
 
 - `stations.json` comes from GET to `https://tb8.onrender.com/stations?query=SELECT%20DISTINCT%20ON%20(StationUniqueId)%20*%20FROM%20self%3B`
 - `platforms.json` comes from GET to `https://tb8.onrender.com/platforms?query=SELECT%20*%20FROM%20self%3B`
+- `routes.json` comes from combining the routes obtained by individual calls to `https://tb8.onrender.com/route-sequence-by-line-direction?line=bakerloo&direction=inbound`
+  using the `combine_routes.sh` script which passes the files to jq and puts them in a single object under `.$line.$direction` for the following lines:
+  - bakerloo
+  - central
+  - circle
+  - district
+  - hammersmith-city
+  - jubilee
+  - metropolitan
+  - northern
+  - piccadilly
+  - victoria
+  - waterloo-city

@@ -3,7 +3,10 @@ pub mod map_helpers;
 pub mod model;
 
 // Re-export commonly used items
-pub use map_helpers::{generate_all_line_data, stations_to_geojson};
+pub use map_helpers::{
+    generate_all_line_data, generate_all_route_geometries, route_geometries_to_geojson,
+    stations_to_geojson,
+};
 
 use crate::utils::log::{self, LogCategory};
 use std::collections::HashMap;
@@ -17,6 +20,10 @@ pub struct TflDataRepository {
     pub platforms_by_station: HashMap<String, Vec<model::Platform>>,
     /// Stations by their unique ID for quick lookup
     pub station_by_id: HashMap<String, model::Station>,
+    /// Route data organized by line ID and direction
+    pub routes: HashMap<String, HashMap<String, Vec<model::RouteSequence>>>,
+    /// Route geometries by line ID for efficient rendering
+    pub route_geometries: HashMap<String, Vec<Vec<[f64; 2]>>>,
     /// Indicates if the repository has been loaded
     pub is_loaded: bool,
 }
@@ -40,11 +47,16 @@ impl TflDataRepository {
         let platforms = loader::load_platforms().await?;
         let platforms_by_station = loader::group_platforms_by_station(platforms);
 
+        // Load and process routes
+        let routes = loader::load_routes().await?;
+        let route_geometries = loader::process_route_geometries(&routes);
+
         log::info_with_category(
             LogCategory::App,
             &format!(
-                "TFL data repository initialized with {} stations",
-                valid_stations.len()
+                "TFL data repository initialized with {} stations and {} routes",
+                valid_stations.len(),
+                routes.len(),
             ),
         );
 
@@ -52,6 +64,8 @@ impl TflDataRepository {
             stations: valid_stations,
             platforms_by_station,
             station_by_id,
+            routes,
+            route_geometries,
             is_loaded: true,
         })
     }
@@ -85,5 +99,28 @@ impl TflDataRepository {
         }
 
         result
+    }
+
+    /// Get all route sequences for a specific line
+    pub fn get_routes_for_line(&self, line_id: &str) -> Vec<&model::RouteSequence> {
+        let mut result = Vec::new();
+
+        if let Some(directions) = self.routes.get(line_id) {
+            for (_, sequences) in directions {
+                for sequence in sequences {
+                    result.push(sequence);
+                }
+            }
+        }
+
+        result
+    }
+
+    /// Get route geometries for a specific line
+    pub fn get_route_geometries_for_line(&self, line_id: &str) -> Vec<Vec<[f64; 2]>> {
+        match self.route_geometries.get(line_id) {
+            Some(geometries) => geometries.clone(),
+            None => Vec::new(),
+        }
     }
 }

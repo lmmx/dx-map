@@ -4,6 +4,7 @@ exclude: |
   (?x)^(
     .*/(target)/.*|
     .*\.lock|
+    .*\.json|
   )$
 
 ci:
