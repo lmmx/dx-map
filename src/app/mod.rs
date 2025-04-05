@@ -372,11 +372,24 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
             logger.error("Failed to convert stations to GeoJSON");
         }
 
-        // Add all tube lines
+        // Add all tube lines (NB this is being incrementally deprecated)
         if let Ok(line_data) = crate::data::generate_all_line_data(&tfl_data) {
             logger.info(&format!("Adding {} TFL lines to map", line_data.len()));
 
             for (line_name, line_geojson, color) in line_data {
+                // Skip lines that have proper route data
+                match line_name.as_str() {
+                    "bakerloo" | "central" | "circle" | "district" | "hammersmith-city"
+                    | "jubilee" | "metropolitan" | "northern" | "piccadilly" | "victoria"
+                    | "waterloo-city" => {
+                        logger.debug(&format!(
+                            "Skipping {} line - using route data instead",
+                            line_name
+                        ));
+                        continue; // Skip this iteration
+                    }
+                    _ => {} // Process other lines normally
+                }
                 web_sys::console::log_1(&line_geojson);
                 let source_id = format!("{}-line", line_name);
                 let layer_id = format!("{}-line-layer", line_name);
