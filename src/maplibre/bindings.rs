@@ -102,6 +102,6 @@ impl Map {
 // Helper to access the global MapLibre instance
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = window, js_name = mapInstance)]
+    #[wasm_bindgen(thread_local_v2, js_namespace = window, js_name = mapInstance)]
     pub static MAP_INSTANCE: Option<Map>;
 }
