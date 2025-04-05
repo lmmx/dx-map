@@ -339,85 +339,6 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
     with_context("add_tfl_data_to_map", LogCategory::Map, |logger| {
         logger.info("Adding TFL data layers to map");
 
-        // Add all stations as a GeoJSON source
-        if let Ok(stations_geojson) = crate::data::stations_to_geojson(&tfl_data.stations) {
-            // Make sure the source doesn't already exist
-            if map.get_layer("tfl-stations-layer").is_none() {
-                logger.info(&format!(
-                    "Adding {} stations to map",
-                    tfl_data.stations.len()
-                ));
-
-                // Add the source
-                web_sys::console::log_1(&stations_geojson);
-                map.add_source("tfl-stations", &stations_geojson);
-
-                // Add a circle layer for the stations
-                if let Ok(stations_layer) =
-                    create_circle_layer("tfl-stations-layer", "tfl-stations")
-                {
-                    map.add_layer(&stations_layer);
-                    logger.debug("Added stations layer");
-                }
-
-                // Add a label layer for the stations
-                if let Ok(labels_layer) = create_label_layer("tfl-station-labels", "tfl-stations") {
-                    map.add_layer(&labels_layer);
-                    logger.debug("Added station labels layer");
-                }
-            } else {
-                logger.debug("Stations layer already exists, skipping");
-            }
-        } else {
-            logger.error("Failed to convert stations to GeoJSON");
-        }
-
-        // Add all tube lines (NB this is being incrementally deprecated)
-        if let Ok(line_data) = crate::data::generate_all_line_data(&tfl_data) {
-            logger.info(&format!("Adding {} TFL lines to map", line_data.len()));
-
-            for (line_name, line_geojson, color) in line_data {
-                // Skip lines that have proper route data
-                match line_name.as_str() {
-                    "bakerloo" | "central" | "circle" | "district" | "hammersmith-city"
-                    | "jubilee" | "metropolitan" | "northern" | "piccadilly" | "victoria"
-                    | "waterloo-city" | "elizabeth" | "thameslink" | "tram" | "dlr" | "london-cable-car" => {
-                        logger.debug(&format!(
-                            "Skipping {} line - using route data instead",
-                            line_name
-                        ));
-                        continue; // Skip this iteration
-                    }
-                    _ => {} // Process other lines normally
-                }
-                web_sys::console::log_1(&line_geojson);
-                let source_id = format!("{}-line", line_name);
-                let layer_id = format!("{}-line-layer", line_name);
-
-                // Make sure the layer doesn't already exist
-                if map.get_layer(&layer_id).is_none() {
-                    // Add the source
-                    map.add_source(&source_id, &line_geojson);
-
-                    // Add the layer
-                    if let Ok(line_layer) = create_line_layer(&layer_id, &source_id, &color, 4.0) {
-                        map.add_layer(&line_layer);
-                        // Anything set this way is invisible (so as to deprecate as we migratet to routes)
-                        map.set_layout_property(
-                            &layer_id,
-                            "visibility",
-                            &JsValue::from_str("none"),
-                        );
-                        logger.debug(&format!("Added {} line", line_name));
-                    }
-                } else {
-                    logger.debug(&format!("{} line already exists, skipping", line_name));
-                }
-            }
-        } else {
-            logger.error("Failed to generate line data");
-        }
-
         // Add route geometries from our new data
         if let Ok(route_data) = crate::data::generate_all_route_geometries(&tfl_data) {
             logger.info(&format!(
@@ -451,6 +372,85 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
         } else {
             logger.error("Failed to generate route geometries");
         }
+
+        // Add all stations as a GeoJSON source
+        if let Ok(stations_geojson) = crate::data::stations_to_geojson(&tfl_data.stations) {
+            // Make sure the source doesn't already exist
+            if map.get_layer("tfl-stations-layer").is_none() {
+                logger.info(&format!(
+                    "Adding {} stations to map",
+                    tfl_data.stations.len()
+                ));
+
+                // Add the source
+                web_sys::console::log_1(&stations_geojson);
+                map.add_source("tfl-stations", &stations_geojson);
+
+                // Add a circle layer for the stations
+                if let Ok(stations_layer) =
+                    create_circle_layer("tfl-stations-layer", "tfl-stations")
+                {
+                    map.add_layer(&stations_layer);
+                    logger.debug("Added stations layer");
+                }
+
+                // Add a label layer for the stations
+                if let Ok(labels_layer) = create_label_layer("tfl-station-labels", "tfl-stations") {
+                    map.add_layer(&labels_layer);
+                    logger.debug("Added station labels layer");
+                }
+            } else {
+                logger.debug("Stations layer already exists, skipping");
+            }
+        } else {
+            logger.error("Failed to convert stations to GeoJSON");
+        }
+
+        // // Add all tube lines (NB this is being incrementally deprecated)
+        // if let Ok(line_data) = crate::data::generate_all_line_data(&tfl_data) {
+        //     logger.info(&format!("Adding {} TFL lines to map", line_data.len()));
+
+        //     for (line_name, line_geojson, color) in line_data {
+        //         // Skip lines that have proper route data
+        //         match line_name.as_str() {
+        //             "bakerloo" | "central" | "circle" | "district" | "hammersmith-city"
+        //             | "jubilee" | "metropolitan" | "northern" | "piccadilly" | "victoria"
+        //             | "waterloo-city" | "elizabeth" | "thameslink" | "tram" | "dlr" | "london-cable-car" => {
+        //                 logger.debug(&format!(
+        //                     "Skipping {} line - using route data instead",
+        //                     line_name
+        //                 ));
+        //                 continue; // Skip this iteration
+        //             }
+        //             _ => {} // Process other lines normally
+        //         }
+        //         web_sys::console::log_1(&line_geojson);
+        //         let source_id = format!("{}-line", line_name);
+        //         let layer_id = format!("{}-line-layer", line_name);
+
+        //         // Make sure the layer doesn't already exist
+        //         if map.get_layer(&layer_id).is_none() {
+        //             // Add the source
+        //             map.add_source(&source_id, &line_geojson);
+
+        //             // Add the layer
+        //             if let Ok(line_layer) = create_line_layer(&layer_id, &source_id, &color, 4.0) {
+        //                 map.add_layer(&line_layer);
+        //                 // Anything set this way is invisible (so as to deprecate as we migratet to routes)
+        //                 map.set_layout_property(
+        //                     &layer_id,
+        //                     "visibility",
+        //                     &JsValue::from_str("none"),
+        //                 );
+        //                 logger.debug(&format!("Added {} line", line_name));
+        //             }
+        //         } else {
+        //             logger.debug(&format!("{} line already exists, skipping", line_name));
+        //         }
+        //     }
+        // } else {
+        //     logger.error("Failed to generate line data");
+        // }
 
         logger.info("TFL data layers added to map");
     });

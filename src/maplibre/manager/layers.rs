@@ -185,30 +185,30 @@ pub fn add_map_layers(
             // Add all tube lines
             logger.info("Adding TfL lines to the map");
 
-            match crate::data::generate_all_line_data(&tfl_data) {
-                Ok(line_data) => {
-                    let line_count = line_data.len(); // Store the length before moving line_data
+            // match crate::data::generate_all_line_data(&tfl_data) {
+            //     Ok(line_data) => {
+            //         let line_count = line_data.len(); // Store the length before moving line_data
 
-                    for (line_name, line_geojson, color) in line_data {
-                        let source_id = format!("{}-line", line_name);
-                        let layer_id = format!("{}-line-layer", line_name);
+            //         for (line_name, line_geojson, color) in line_data {
+            //             let source_id = format!("{}-line", line_name);
+            //             let layer_id = format!("{}-line-layer", line_name);
 
-                        // Add the source
-                        map.add_source(&source_id, &line_geojson);
+            //             // Add the source
+            //             map.add_source(&source_id, &line_geojson);
 
-                        // Add the layer
-                        let line_layer = create_line_layer(&layer_id, &source_id, &color, 4.0)?;
-                        map.add_layer(&line_layer);
+            //             // Add the layer
+            //             let line_layer = create_line_layer(&layer_id, &source_id, &color, 4.0)?;
+            //             map.add_layer(&line_layer);
 
-                        logger.debug(&format!("Added {} line", line_name));
-                    }
+            //             logger.debug(&format!("Added {} line", line_name));
+            //         }
 
-                    logger.info(&format!("Added {} TfL lines to the map", line_count));
-                }
-                Err(e) => {
-                    logger.error(&format!("Failed to generate line data: {:?}", e));
-                }
-            }
+            //         logger.info(&format!("Added {} TfL lines to the map", line_count));
+            //     }
+            //     Err(e) => {
+            //         logger.error(&format!("Failed to generate line data: {:?}", e));
+            //     }
+            // }
         }
 
         logger.info("All map layers added successfully");
