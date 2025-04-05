@@ -141,9 +141,6 @@ impl LayerManager {
                 // Update tube layers
                 set_visibility("london-cable-car-line-layer", layers.tube)?;
 
-                // Update overground layer
-                set_visibility("london-overground-line-layer", layers.tube)?;
-
                 // Update stations layers
                 set_visibility("stations-layer", layers.stations)?;
                 set_visibility("station-labels", layers.stations)?;

@@ -153,10 +153,40 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
             ));
             // Non-tube
             transport_layers.push(&Layer::new(
-                "overground",
-                "Overground",
-                "london-overground-line-layer",
-                false,
+                "overground-liberty",
+                "Liberty Line",
+                "liberty-route-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "overground-lioness",
+                "Lioness Line",
+                "lioness-route-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "overground-mildmay",
+                "Mildmay Line",
+                "mildmay-route-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "overground-suffragette",
+                "Suffragette Line",
+                "suffragette-route-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "overground-weaver",
+                "Weaver Line",
+                "weaver-route-layer",
+                true,
+            ));
+            transport_layers.push(&Layer::new(
+                "overground-windrush",
+                "Windrush Line",
+                "windrush-route-layer",
+                true,
             ));
             transport_layers.push(&Layer::new(
                 "cable-car",

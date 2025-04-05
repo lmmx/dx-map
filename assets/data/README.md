@@ -21,3 +21,13 @@ be relatively stable over time.
   - piccadilly
   - victoria
   - waterloo-city
+  - elizabeth
+  - tram
+  - thameslink
+  - dlr
+  - liberty
+  - lioness
+  - mildmay
+  - suffragette
+  - weaver
+  - windrush

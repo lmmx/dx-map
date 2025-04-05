@@ -271,6 +271,12 @@ pub fn get_line_color(line_name: &str) -> &'static str {
         "tram" => "#84B817",
         "victoria" => "#0098D4",
         "waterloo-city" => "#95CDBA",
+        "liberty" => "#4C6366",
+        "lioness" => "#FFA32B",
+        "mildmay" => "#088ECC",
+        "suffragette" => "#59C274",
+        "weaver" => "#B43983",
+        "windrush" => "#FF2E24",
         _ => "#FFFFFF", // Default white for unknown lines
     }
 }
