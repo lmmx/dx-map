@@ -36,7 +36,6 @@ pub fn set_log_level(level: LogLevel) {
 pub enum LogCategory {
     Map,
     Simulation,
-    UI,
     App,
     General,
 }
@@ -46,7 +45,6 @@ impl LogCategory {
         match self {
             LogCategory::Map => "MAP",
             LogCategory::Simulation => "SIM",
-            LogCategory::UI => "UI",
             LogCategory::App => "APP",
             LogCategory::General => "GEN",
         }
