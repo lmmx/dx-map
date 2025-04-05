@@ -377,6 +377,7 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
             logger.info(&format!("Adding {} TFL lines to map", line_data.len()));
 
             for (line_name, line_geojson, color) in line_data {
+                web_sys::console::log_1(&line_geojson);
                 let source_id = format!("{}-line", line_name);
                 let layer_id = format!("{}-line-layer", line_name);
 
@@ -403,6 +404,8 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
             logger.info(&format!("Adding {} TFL route geometries to map", route_data.len()));
 
             for (line_id, route_geojson) in route_data {
+                logger.debug(&format!("Adding {} route geometry", line_id));
+                web_sys::console::log_1(&route_geojson);
                 let source_id = format!("{}-route", line_id);
                 let layer_id = format!("{}-route-layer", line_id);
 

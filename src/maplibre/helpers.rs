@@ -82,67 +82,67 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
             transport_layers.push(&Layer::new(
                 "tube-central",
                 "Central Line",
-                "central-line-layer",
+                "central-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-northern",
                 "Northern Line",
-                "northern-line-layer",
+                "northern-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-victoria",
                 "Victoria Line",
-                "victoria-line-layer",
+                "victoria-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-district",
                 "District Line",
-                "district-line-layer",
+                "district-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-bakerloo",
                 "Bakerloo Line",
-                "bakerloo-line-layer",
+                "bakerloo-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-hammersmith-city",
                 "Hammersmith & City Line",
-                "hammersmith-city-line-layer",
+                "hammersmith-city-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-piccadilly",
                 "Piccadilly Line",
-                "piccadilly-line-layer",
+                "piccadilly-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-jubilee",
                 "Jubilee Line",
-                "jubilee-line-layer",
+                "jubilee-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-metropolitan",
                 "Metropolitan Line",
-                "metropolitan-line-layer",
+                "metropolitan-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-circle",
                 "Circle Line",
-                "circle-line-layer",
+                "circle-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
                 "tube-waterloo-city",
                 "Waterloo & City Line",
-                "waterloo-city-line-layer",
+                "waterloo-city-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new(
