@@ -1,7 +1,11 @@
+use crate::data::line_definitions::{get_other_rail_lines, get_underground_lines};
 use dioxus::prelude::*;
 
 #[component]
 pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
+    let underground_lines = get_underground_lines();
+    let other_rail_lines = get_other_rail_lines();
+
     rsx! {
         div {
             class: if visible { "oim-key-panel visible" } else { "oim-key-panel" },
@@ -21,91 +25,14 @@ pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
 
                 h3 { "Underground Lines" }
                 table {
-                    tr {
-                        td { "Bakerloo" }
-                        td {
-                            div {
-                                class: "color-line bakerloo"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Central" }
-                        td {
-                            div {
-                                class: "color-line central"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Circle" }
-                        td {
-                            div {
-                                class: "color-line circle"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "District" }
-                        td {
-                            div {
-                                class: "color-line district"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Hammersmith & City" }
-                        td {
-                            div {
-                                class: "color-line hammersmith"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Jubilee" }
-                        td {
-                            div {
-                                class: "color-line jubilee"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Metropolitan" }
-                        td {
-                            div {
-                                class: "color-line metropolitan"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Northern" }
-                        td {
-                            div {
-                                class: "color-line northern"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Piccadilly" }
-                        td {
-                            div {
-                                class: "color-line piccadilly"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Victoria" }
-                        td {
-                            div {
-                                class: "color-line victoria"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Waterloo & City" }
-                        td {
-                            div {
-                                class: "color-line waterloo"
+                    // Dynamically generate rows for underground lines
+                    for line in &underground_lines {
+                        tr {
+                            td { "{line.name}" }
+                            td {
+                                div {
+                                    class: format_args!("color-line {}", line.id)
+                                }
                             }
                         }
                     }
@@ -113,43 +40,14 @@ pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
 
                 h3 { "Other Rail" }
                 table {
-                    tr {
-                        td { "Overground" }
-                        td {
-                            div {
-                                class: "color-line overground"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "DLR" }
-                        td {
-                            div {
-                                class: "color-line dlr"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Elizabeth Line" }
-                        td {
-                            div {
-                                class: "color-line elizabeth"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Trams" }
-                        td {
-                            div {
-                                class: "color-line tram"
-                            }
-                        }
-                    }
-                    tr {
-                        td { "Cable Car" }
-                        td {
-                            div {
-                                class: "color-line cablecar"
+                    // Dynamically generate rows for other rail lines
+                    for line in &other_rail_lines {
+                        tr {
+                            td { "{line.name}" }
+                            td {
+                                div {
+                                    class: format_args!("color-line {}", line.id)
+                                }
                             }
                         }
                     }

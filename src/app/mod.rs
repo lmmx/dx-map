@@ -7,9 +7,12 @@ use dioxus::prelude::*;
 mod canvas;
 mod key_panel;
 mod layer_panel;
+mod line_css;
 mod simulation; // New module for vehicle simulation
 
+use crate::app::line_css::LineCss;
 use crate::data::TflDataRepository;
+use crate::data::line_definitions::get_line_color;
 use crate::maplibre::helpers;
 use crate::utils::log::{self, LogCategory, with_context};
 use canvas::Canvas;
@@ -296,7 +299,46 @@ pub fn app() -> Element {
         })
     });
 
+    // Add an effect to connect the key panel (glorified onclick event handler)
+    use_effect(move || {
+        with_context("app::key_panel_connection", LogCategory::App, |logger| {
+            logger.info("Setting up key panel connection to JavaScript");
+
+            // Create a clone of the signal for the closure
+            let mut show_key = show_key_panel.clone();
+
+            // Create a closure that will open the key panel when called from JavaScript
+            // Don't capture logger in this closure!
+            let open_key_callback = Closure::wrap(Box::new(move || {
+                // Use direct log calls instead of the captured logger
+                log::debug_with_category(
+                    LogCategory::App,
+                    "openTflKeyPanel called from JavaScript",
+                );
+                show_key.set(true);
+            }) as Box<dyn FnMut()>);
+
+            // Expose the closure to JavaScript
+            if let Some(window) = window() {
+                if let Err(e) = js_sys::Reflect::set(
+                    &window,
+                    &JsValue::from_str("openTflKeyPanel"),
+                    &open_key_callback.as_ref(),
+                ) {
+                    logger.error(&format!("Failed to set openTflKeyPanel: {:?}", e));
+                } else {
+                    logger.info("Successfully exposed openTflKeyPanel to JavaScript");
+                }
+            }
+
+            // Forget the closure to prevent memory leaks
+            open_key_callback.forget();
+        });
+    });
+
     rsx! {
+        LineCss {}
+
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TFL_CSS }
@@ -464,33 +506,34 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
     });
 }
 
-/// Helper function to get the color for a specific TfL line
-fn get_line_color(line_id: &str) -> String {
-    match line_id {
-        "bakerloo" => "#B36305",
-        "central" => "#E32017",
-        "circle" => "#FFD300",
-        "district" => "#00782A",
-        "hammersmith-city" => "#F3A9BB",
-        "jubilee" => "#A0A5A9",
-        "metropolitan" => "#9B0056",
-        "northern" => "#000000",
-        "piccadilly" => "#003688",
-        "victoria" => "#0098D4",
-        "waterloo-city" => "#95CDBA",
-        "dlr" => "#00A4A7",
-        "london-overground" => "#EE7C0E",
-        "elizabeth" => "#6950A1",
-        "tram" => "#84B817",
-        "cable-car" => "#E21836",
-        "thameslink" => "#C1007C",
-        "liberty" => "#4C6366",
-        "lioness" => "#FFA32B",
-        "mildmay" => "#088ECC",
-        "suffragette" => "#59C274",
-        "weaver" => "#B43983",
-        "windrush" => "#FF2E24",
-        _ => "#777777", // Default gray for unknown lines
-    }
-    .to_string()
-}
+// DEPRECATED FOR crate::data::line_definitions::get_line_color(line_id)
+// /// Helper function to get the color for a specific TfL line
+// fn get_line_color(line_id: &str) -> String {
+//     match line_id {
+//         "bakerloo" => "#B36305",
+//         "central" => "#E32017",
+//         "circle" => "#FFD300",
+//         "district" => "#00782A",
+//         "hammersmith-city" => "#F3A9BB",
+//         "jubilee" => "#A0A5A9",
+//         "metropolitan" => "#9B0056",
+//         "northern" => "#000000",
+//         "piccadilly" => "#003688",
+//         "victoria" => "#0098D4",
+//         "waterloo-city" => "#95CDBA",
+//         "dlr" => "#00A4A7",
+//         "london-overground" => "#EE7C0E",
+//         "elizabeth" => "#6950A1",
+//         "tram" => "#84B817",
+//         "cable-car" => "#E21836",
+//         "thameslink" => "#C1007C",
+//         "liberty" => "#4C6366",
+//         "lioness" => "#FFA32B",
+//         "mildmay" => "#088ECC",
+//         "suffragette" => "#59C274",
+//         "weaver" => "#B43983",
+//         "windrush" => "#FF2E24",
+//         _ => "#777777", // Default gray for unknown lines
+//     }
+//     .to_string()
+// }

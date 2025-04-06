@@ -56,7 +56,7 @@ pub fn expose_simulation_functions(tfl_data: Option<TflDataRepository>) -> Resul
             let reset_closure = Closure::wrap(Box::new({
                 let tfl_data_inner = tfl_data_for_reset;
                 move || {
-                        log::info_with_category(
+                    log::info_with_category(
                         LogCategory::Simulation,
                         "rust_reset_simulation called from JS",
                     );
