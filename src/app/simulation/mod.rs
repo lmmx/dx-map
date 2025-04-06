@@ -1,7 +1,7 @@
 use crate::app::simulation::model::build_routes_from_tfl_data;
 use crate::data::TflDataRepository;
 use crate::utils::log::{self, LogCategory, with_context};
-use js_sys::Object;
+use js_sys::{Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;
 
@@ -140,73 +140,110 @@ pub fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
 
 /// Register vehicle layers with MapLibre GL
 fn register_vehicle_layers() {
-    with_context(
-        "register_vehicle_layers",
-        LogCategory::Simulation,
-        |logger| {
-            logger.info("Registering vehicle layers with MapLibre");
+    with_context("register_vehicle_layers", LogCategory::Simulation, |logger| {
+        logger.info("Registering vehicle layers with MapLibre using Rust bindings");
 
-            // Access the MapLibre instance
-            let js_code = r#"
-        if (window.mapInstance) {
-            // Add a source for vehicles
-            if (!window.mapInstance.getSource('vehicles-source')) {
-                window.mapInstance.addSource('vehicles-source', {
-                    type: 'geojson',
-                    data: {
-                        type: 'FeatureCollection',
-                        features: []
-                    }
-                });
+        // Get the map instance from window
+        if let Some(window) = window() {
+            if let Ok(map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
+                let map: crate::maplibre::bindings::Map = map_instance.into();
 
-                // Add a layer for bus vehicles
-                window.mapInstance.addLayer({
-                    id: 'buses-layer',
-                    type: 'circle',
-                    source: 'vehicles-source',
-                    filter: ['==', ['get', 'vehicleType'], 'Bus'],
-                    paint: {
-                        'circle-radius': 6,
-                        'circle-color': '#0000FF',
-                        'circle-stroke-color': '#FFFFFF',
-                        'circle-stroke-width': 2
-                    }
-                });
+                // Check if source already exists
+                if map.get_source("vehicles-source").is_none() {
+                    // Create GeoJSON source for vehicles
+                    let source = {
+                        let obj = Object::new();
+                        Reflect::set(&obj, &JsValue::from_str("type"), &JsValue::from_str("geojson")).unwrap();
 
-                // Add a layer for train vehicles
-                window.mapInstance.addLayer({
-                    id: 'trains-layer',
-                    type: 'circle',
-                    source: 'vehicles-source',
-                    filter: ['==', ['get', 'vehicleType'], 'Train'],
-                    paint: {
-                        'circle-radius': 6,
-                        'circle-color': '#FF0000',
-                        'circle-stroke-color': '#FFFFFF',
-                        'circle-stroke-width': 2
-                    }
-                });
+                        let data = Object::new();
+                        Reflect::set(&data, &JsValue::from_str("type"), &JsValue::from_str("FeatureCollection")).unwrap();
+                        Reflect::set(&data, &JsValue::from_str("features"), &js_sys::Array::new()).unwrap();
 
-                // Make sure the simulation layers are visible by default
-                const initialVisibility = window.simulationVisible === false ? 'none' : 'visible';
-                window.mapInstance.setLayoutProperty('buses-layer', 'visibility', initialVisibility);
-                window.mapInstance.setLayoutProperty('trains-layer', 'visibility', initialVisibility);
+                        Reflect::set(&obj, &JsValue::from_str("data"), &data).unwrap();
+                        obj
+                    };
 
-                console.log('Vehicle layers registered with MapLibre, visibility:', initialVisibility);
+                    // Add the source
+                    map.add_source("vehicles-source", &source);
+
+                    // Create bus layer
+                    let bus_layer = {
+                        let layer = Object::new();
+                        Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str("buses-layer")).unwrap();
+                        Reflect::set(&layer, &JsValue::from_str("type"), &JsValue::from_str("circle")).unwrap();
+                        Reflect::set(&layer, &JsValue::from_str("source"), &JsValue::from_str("vehicles-source")).unwrap();
+
+                        // Add filter
+                        let filter = js_sys::Array::new();
+                        filter.push(&JsValue::from_str("=="));
+
+                        let get_expr = js_sys::Array::new();
+                        get_expr.push(&JsValue::from_str("get"));
+                        get_expr.push(&JsValue::from_str("vehicleType"));
+
+                        filter.push(&get_expr);
+                        filter.push(&JsValue::from_str("Bus"));
+
+                        Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
+
+                        // Paint properties
+                        let paint = Object::new();
+                        Reflect::set(&paint, &JsValue::from_str("circle-radius"), &JsValue::from_f64(6.0)).unwrap();
+                        Reflect::set(&paint, &JsValue::from_str("circle-color"), &JsValue::from_str("#0000FF")).unwrap();
+                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-color"), &JsValue::from_str("#FFFFFF")).unwrap();
+                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-width"), &JsValue::from_f64(2.0)).unwrap();
+
+                        Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
+                        layer
+                    };
+
+                    // Add bus layer
+                    map.add_layer(&bus_layer);
+
+                    // Create train layer (similar to bus layer but different color and filter)
+                    let train_layer = {
+                        let layer = Object::new();
+                        Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str("trains-layer")).unwrap();
+                        Reflect::set(&layer, &JsValue::from_str("type"), &JsValue::from_str("circle")).unwrap();
+                        Reflect::set(&layer, &JsValue::from_str("source"), &JsValue::from_str("vehicles-source")).unwrap();
+
+                        // Add filter
+                        let filter = js_sys::Array::new();
+                        filter.push(&JsValue::from_str("=="));
+
+                        let get_expr = js_sys::Array::new();
+                        get_expr.push(&JsValue::from_str("get"));
+                        get_expr.push(&JsValue::from_str("vehicleType"));
+
+                        filter.push(&get_expr);
+                        filter.push(&JsValue::from_str("Train"));
+
+                        Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
+
+                        // Paint properties
+                        let paint = Object::new();
+                        Reflect::set(&paint, &JsValue::from_str("circle-radius"), &JsValue::from_f64(6.0)).unwrap();
+                        Reflect::set(&paint, &JsValue::from_str("circle-color"), &JsValue::from_str("#FF0000")).unwrap();
+                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-color"), &JsValue::from_str("#FFFFFF")).unwrap();
+                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-width"), &JsValue::from_f64(2.0)).unwrap();
+
+                        Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
+                        layer
+                    };
+
+                    // Add train layer
+                    map.add_layer(&train_layer);
+                    logger.info("Vehicle layers successfully added using Rust bindings");
+                } else {
+                    logger.info("Vehicle source already exists, skipping layer creation");
+                }
+            } else {
+                logger.error("Could not get mapInstance from window");
             }
         } else {
-            console.error('MapInstance not found!');
+            logger.error("Window object not available");
         }
-        "#;
-
-            let eval_result = js_sys::eval(js_code);
-            if let Err(err) = eval_result {
-                logger.error(&format!("Failed to register vehicle layers: {:?}", err));
-            } else {
-                logger.debug("Vehicle layers registered successfully");
-            }
-        },
-    )
+    })
 }
 
 /// Start the animation loop for vehicle movement

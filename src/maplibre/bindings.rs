@@ -30,6 +30,9 @@ extern "C" {
     #[wasm_bindgen(method, js_name = addSource)]
     pub fn add_source(this: &Map, id: &str, source: &JsValue) -> Map;
 
+    #[wasm_bindgen(method, js_name = getSource)]
+    pub fn get_source_raw(this: &Map, id: &str) -> JsValue;
+
     #[wasm_bindgen(method, js_name = addLayer)]
     pub fn add_layer(this: &Map, layer: &JsValue) -> Map;
 
@@ -91,6 +94,15 @@ extern "C" {
 impl Map {
     pub fn get_layer(&self, id: &str) -> Option<JsValue> {
         let raw = self.get_layer_raw(id);
+        if raw.is_null() || raw.is_undefined() {
+            None
+        } else {
+            Some(raw)
+        }
+    }
+
+    pub fn get_source(&self, id: &str) -> Option<JsValue> {
+        let raw = self.get_source_raw(id);
         if raw.is_null() || raw.is_undefined() {
             None
         } else {
