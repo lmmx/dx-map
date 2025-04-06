@@ -321,30 +321,6 @@ pub fn add_inline_script(content: &str) -> Result<(), JsValue> {
 
 // Helper functions for creating map elements
 
-pub fn create_geojson_line_source(coordinates: &[(f64, f64)]) -> Result<JsValue, JsError> {
-    with_context("create_geojson_line_source", LogCategory::Map, |logger| {
-        logger.debug(&format!(
-            "Creating GeoJSON line source with {} points",
-            coordinates.len()
-        ));
-
-        // Convert the coordinates from (f64, f64) to [f64; 2]
-        let coords: Vec<[f64; 2]> = coordinates.iter().map(|&(lng, lat)| [lng, lat]).collect();
-
-        // Create an empty properties object
-        let properties = serde_json::json!({});
-
-        // Create a LineString feature
-        let feature = new_linestring_feature(coords.clone(), properties);
-
-        // Create the GeoJSON source
-        let geojson_source = new_geojson_source(vec![feature]);
-
-        // Serialize to JsValue
-        to_js_value(&geojson_source)
-    })
-}
-
 pub fn create_line_layer(
     id: &str,
     source: &str,
@@ -396,48 +372,6 @@ pub fn create_line_layer(
         Reflect::set(&layer, &JsValue::from_str("paint"), &paint)?;
 
         Ok(layer.into())
-    })
-}
-
-pub fn create_geojson_points_source(
-    points: &[HashMap<String, JsValue>],
-) -> Result<JsValue, JsError> {
-    with_context("create_geojson_points_source", LogCategory::Map, |logger| {
-        logger.debug(&format!(
-            "Creating points source with {} points",
-            points.len()
-        ));
-
-        // Convert each point to a Feature
-        let features: Vec<_> = points
-            .iter()
-            .filter_map(|point| {
-                // Get coordinates
-                let lng = point.get("lng")?.as_f64()?;
-                let lat = point.get("lat")?.as_f64()?;
-
-                // Create properties object
-                let mut properties = serde_json::Map::new();
-                if let Some(name) = point.get("name") {
-                    if let Some(name_str) = name.as_string() {
-                        properties.insert("name".to_string(), serde_json::Value::String(name_str));
-                    }
-                }
-
-                // Create the feature
-                Some(new_point_feature(
-                    lng,
-                    lat,
-                    serde_json::Value::Object(properties),
-                ))
-            })
-            .collect();
-
-        // Create the GeoJSON source
-        let geojson_source = new_geojson_source(features);
-
-        // Serialize to JsValue
-        to_js_value(&geojson_source)
     })
 }
 
