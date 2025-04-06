@@ -254,7 +254,7 @@ pub fn process_route_geometries(
         let mut geometries = Vec::new();
 
         // Process both inbound and outbound directions
-        for (_, route_sequences) in directions {
+        for route_sequences in directions.values() {
             for sequence in route_sequences {
                 for line_string in &sequence.line_strings {
                     // Parse the LineString from GeoJSON format

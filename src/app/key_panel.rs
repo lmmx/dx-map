@@ -1,4 +1,6 @@
-use crate::data::line_definitions::{get_other_rail_lines, get_overground_lines, get_underground_lines};
+use crate::data::line_definitions::{
+    get_other_rail_lines, get_overground_lines, get_underground_lines,
+};
 use dioxus::prelude::*;
 
 #[component]
