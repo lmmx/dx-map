@@ -4,8 +4,6 @@ use crate::utils::geojson::{
     new_geojson_source, new_linestring_feature, new_point_feature, to_js_value,
 };
 use crate::utils::log::{self, LogCategory};
-use js_sys::{Array, Object, Reflect};
-use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::{JsError, JsValue};
 

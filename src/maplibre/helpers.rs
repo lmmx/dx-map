@@ -4,6 +4,7 @@ use crate::utils::geojson::{
 };
 use crate::utils::log::{LogCategory, with_context};
 use js_sys::{Array, Object, Reflect};
+use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use web_sys::window;
@@ -447,43 +448,32 @@ pub fn create_circle_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
             "Creating circle layer '{}' with source '{}'",
             id, source
         ));
-        let layer = Object::new();
-        Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str(id))?;
-        Reflect::set(
-            &layer,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("circle"),
-        )?;
-        Reflect::set(
-            &layer,
-            &JsValue::from_str("source"),
-            &JsValue::from_str(source),
-        )?;
 
-        let paint = Object::new();
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-radius"),
-            &JsValue::from_f64(6.0),
-        )?;
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-color"),
-            &JsValue::from_str("#ffffff"),
-        )?;
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-stroke-color"),
-            &JsValue::from_str("#000000"),
-        )?;
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-stroke-width"),
-            &JsValue::from_f64(2.0),
-        )?;
-        Reflect::set(&layer, &JsValue::from_str("paint"), &paint)?;
+        // Create the layer configuration with JSON
+        let layer_config = serde_json::json!({
+            "id": id,
+            "type": "circle",
+            "source": source,
+            "paint": {
+                "circle-radius": 6.0,
+                "circle-color": "#ffffff",
+                "circle-stroke-color": "#000000",
+                "circle-stroke-width": 2.0
+            }
+        });
 
-        Ok(layer.into())
+        // Serialize to JsValue
+        let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
+        match layer_config.serialize(&serializer) {
+            Ok(js_value) => Ok(js_value),
+            Err(err) => {
+                logger.error(&format!("Failed to serialize circle layer: {:?}", err));
+                Err(JsValue::from_str(&format!(
+                    "Serialization error: {:?}",
+                    err
+                )))
+            }
+        }
     })
 }
 

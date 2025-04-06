@@ -1,9 +1,6 @@
 use crate::app::simulation::model::build_routes_from_tfl_data;
 use crate::data::TflDataRepository;
-use crate::utils::geojson::{
-    Feature, FeatureCollection, GeoJsonSource, Geometry, new_geojson_source, new_point_feature,
-    to_js_value,
-};
+use crate::utils::geojson::{new_geojson_source, new_point_feature, to_js_value};
 use crate::utils::log::{self, LogCategory, with_context};
 use js_sys::{Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
@@ -462,7 +459,8 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
 
     // Try to get the map instance and update the source
     if let Some(window) = window() {
-        if let Ok(map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
+        if let Ok(_map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance"))
+        {
             // Check if the source exists using JS eval for now
             let has_source = js_sys::eval(
                 "window.mapInstance && window.mapInstance.getSource('vehicles-source') != null",
@@ -508,47 +506,6 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
             }
         }
     }
-}
-
-/// Serialize a JS object to a JSON string for embedding in JS code
-fn serialize_geojson_data(geojson: &Object) -> String {
-    with_context(
-        "serialize_geojson_data",
-        LogCategory::Simulation,
-        |logger| {
-            logger.debug("Serializing GeoJSON data to string");
-
-            let js_code = r#"
-        function serializeToJSON(obj) {
-            try {
-                return JSON.stringify(obj);
-            } catch (e) {
-                console.error("Failed to stringify object:", e);
-                return "{}";
-            }
-        }
-        serializeToJSON(arguments[0]);
-        "#;
-
-            // Try to call the function safely
-            match js_sys::Function::new_with_args("obj", js_code)
-                .call1(&JsValue::NULL, &geojson.into())
-            {
-                Ok(result) => {
-                    // Try to convert to string, fallback to empty JSON if it fails
-                    result.as_string().unwrap_or_else(|| {
-                        logger.error("Failed to get string from serialized result");
-                        "{}".to_string()
-                    })
-                }
-                Err(err) => {
-                    // Log the error and return empty JSON
-                    logger.error(&format!("Failed to serialize GeoJSON: {:?}", err));
-                    "{}".to_string()
-                }
-            }
-        },
-    )
 }
 
 /// Toggle the simulation pause state
