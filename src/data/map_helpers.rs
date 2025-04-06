@@ -88,11 +88,12 @@ pub fn create_line_stations_map(platforms: &[Platform]) -> HashMap<String, Vec<S
 }
 
 /// Convert line stations to GeoJSON LineString format
+/// Convert line stations to GeoJSON LineString format
 pub fn line_to_geojson(
     line_name: &str,
     station_ids: &[String],
     stations_by_id: &HashMap<String, Station>,
-) -> Result<JsValue, JsValue> {
+) -> Result<JsValue, JsError> {
     log::info_with_category(
         LogCategory::Map,
         &format!(
@@ -106,72 +107,51 @@ pub fn line_to_geojson(
     let mut coordinates = Vec::new();
     for station_id in station_ids {
         if let Some(station) = stations_by_id.get(station_id) {
-            coordinates.push((station.lon, station.lat));
+            coordinates.push([station.lon, station.lat]);
         }
     }
 
     // We need at least 2 points to form a line
     if coordinates.len() < 2 {
-        return Err(JsValue::from_str(&format!(
+        return Err(JsError::new(&format!(
             "Not enough stations with valid coordinates for {} line",
             line_name
         )));
     }
 
-    // Create the GeoJSON
-    let source = Object::new();
-    Reflect::set(
-        &source,
-        &JsValue::from_str("type"),
-        &JsValue::from_str("geojson"),
-    )?;
+    // Create properties as a JSON object
+    let properties = serde_json::json!({
+        "name": line_name,
+    });
 
-    let data = Object::new();
-    Reflect::set(
-        &data,
-        &JsValue::from_str("type"),
-        &JsValue::from_str("Feature"),
-    )?;
+    // Create a GeoJSON LineString feature
+    let feature = Feature {
+        feature_type: "Feature".to_string(),
+        geometry: Geometry::LineString {
+            coordinates: coordinates.clone(),
+        },
+        properties,
+    };
 
-    // Set properties
-    let properties = Object::new();
-    Reflect::set(
-        &properties,
-        &JsValue::from_str("name"),
-        &JsValue::from_str(line_name),
-    )?;
-    Reflect::set(&data, &JsValue::from_str("properties"), &properties)?;
-
-    // Set geometry
-    let geometry = Object::new();
-    Reflect::set(
-        &geometry,
-        &JsValue::from_str("type"),
-        &JsValue::from_str("LineString"),
-    )?;
-
-    let coords_array = Array::new();
-    for &(lng, lat) in &coordinates {
-        let point = Array::new();
-        point.push(&JsValue::from_f64(lng));
-        point.push(&JsValue::from_f64(lat));
-        coords_array.push(&point);
-    }
-
-    Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coords_array)?;
-    Reflect::set(&data, &JsValue::from_str("geometry"), &geometry)?;
-    Reflect::set(&source, &JsValue::from_str("data"), &data)?;
+    // Create the GeoJSON source
+    let geojson_source = GeoJsonSource {
+        source_type: "geojson".to_string(),
+        data: FeatureCollection {
+            collection_type: "FeatureCollection".to_string(),
+            features: vec![feature],
+        },
+    };
 
     log::debug_with_category(
         LogCategory::Map,
         &format!(
             "Created GeoJSON LineString for {} line with {} points",
             line_name,
-            coords_array.length()
+            coordinates.len()
         ),
     );
 
-    Ok(source.into())
+    to_js_value(&geojson_source)
 }
 
 /// Get the color for a specific TfL line
