@@ -6,13 +6,13 @@ use dioxus::prelude::*;
 
 mod canvas;
 mod key_panel;
-mod line_css;
 mod layer_panel;
+mod line_css;
 mod simulation; // New module for vehicle simulation
 
-use crate::data::line_definitions::get_line_color;
 use crate::app::line_css::LineCss;
 use crate::data::TflDataRepository;
+use crate::data::line_definitions::get_line_color;
 use crate::maplibre::helpers;
 use crate::utils::log::{self, LogCategory, with_context};
 use canvas::Canvas;
@@ -303,31 +303,34 @@ pub fn app() -> Element {
     use_effect(move || {
         with_context("app::key_panel_connection", LogCategory::App, |logger| {
             logger.info("Setting up key panel connection to JavaScript");
-    
+
             // Create a clone of the signal for the closure
             let mut show_key = show_key_panel.clone();
-    
+
             // Create a closure that will open the key panel when called from JavaScript
             // Don't capture logger in this closure!
             let open_key_callback = Closure::wrap(Box::new(move || {
                 // Use direct log calls instead of the captured logger
-                log::debug_with_category(LogCategory::App, "openTflKeyPanel called from JavaScript");
+                log::debug_with_category(
+                    LogCategory::App,
+                    "openTflKeyPanel called from JavaScript",
+                );
                 show_key.set(true);
             }) as Box<dyn FnMut()>);
-    
+
             // Expose the closure to JavaScript
             if let Some(window) = window() {
                 if let Err(e) = js_sys::Reflect::set(
                     &window,
                     &JsValue::from_str("openTflKeyPanel"),
-                    &open_key_callback.as_ref()
+                    &open_key_callback.as_ref(),
                 ) {
                     logger.error(&format!("Failed to set openTflKeyPanel: {:?}", e));
                 } else {
                     logger.info("Successfully exposed openTflKeyPanel to JavaScript");
                 }
             }
-    
+
             // Forget the closure to prevent memory leaks
             open_key_callback.forget();
         });

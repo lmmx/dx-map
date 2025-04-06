@@ -1,5 +1,5 @@
+use crate::data::line_definitions::{get_other_rail_lines, get_underground_lines};
 use dioxus::prelude::*;
-use crate::data::line_definitions::{get_underground_lines, get_other_rail_lines};
 
 #[component]
 pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
