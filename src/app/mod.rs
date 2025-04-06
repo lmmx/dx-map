@@ -15,6 +15,7 @@ use crate::app::line_css::LineCss;
 use crate::data::TflDataRepository;
 use crate::data::line_definitions::get_line_color;
 use crate::maplibre::helpers;
+use crate::maplibre::helpers::{create_circle_layer, create_label_layer, create_line_layer};
 use crate::utils::log::{self, LogCategory, with_context};
 use canvas::Canvas;
 use key_panel::KeyPanel;
@@ -496,9 +497,6 @@ pub fn app() -> Element {
 
 /// Helper function to add TFL data layers to an already initialized map
 fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRepository) {
-    use crate::maplibre::helpers::{create_circle_layer, create_label_layer, create_line_layer};
-    use crate::utils::log::{LogCategory, with_context};
-
     with_context("add_tfl_data_to_map", LogCategory::Map, |logger| {
         logger.info("Adding TFL data layers to map");
 
@@ -523,8 +521,18 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
                     // Get the appropriate color for this line
                     let color = get_line_color(&line_id);
 
+                    let route_mode = tfl_data
+                        .routes
+                        .get(&line_id)
+                        .and_then(|directions| directions.values().next())
+                        .and_then(|response| response.first())
+                        .map(|route_sequence| route_sequence.mode.to_lowercase())
+                        .unwrap_or_else(|| "train".to_string());
+                    let width = if route_mode == "bus" { 0.0 } else { 3.0 };
+
                     // Add the layer with a dashed style to distinguish from simplified line data
-                    if let Ok(route_layer) = create_line_layer(&layer_id, &source_id, &color, 3.0) {
+                    if let Ok(route_layer) = create_line_layer(&layer_id, &source_id, &color, width)
+                    {
                         map.add_layer(&route_layer);
                         logger.debug(&format!("Added {} route geometry", line_id));
                     }
@@ -619,35 +627,3 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
         logger.info("TFL data layers added to map");
     });
 }
-
-// DEPRECATED FOR crate::data::line_definitions::get_line_color(line_id)
-// /// Helper function to get the color for a specific TfL line
-// fn get_line_color(line_id: &str) -> String {
-//     match line_id {
-//         "bakerloo" => "#B36305",
-//         "central" => "#E32017",
-//         "circle" => "#FFD300",
-//         "district" => "#00782A",
-//         "hammersmith-city" => "#F3A9BB",
-//         "jubilee" => "#A0A5A9",
-//         "metropolitan" => "#9B0056",
-//         "northern" => "#000000",
-//         "piccadilly" => "#003688",
-//         "victoria" => "#0098D4",
-//         "waterloo-city" => "#95CDBA",
-//         "dlr" => "#00A4A7",
-//         "london-overground" => "#EE7C0E",
-//         "elizabeth" => "#6950A1",
-//         "tram" => "#84B817",
-//         "cable-car" => "#E21836",
-//         "thameslink" => "#C1007C",
-//         "liberty" => "#4C6366",
-//         "lioness" => "#FFA32B",
-//         "mildmay" => "#088ECC",
-//         "suffragette" => "#59C274",
-//         "weaver" => "#B43983",
-//         "windrush" => "#FF2E24",
-//         _ => "#777777", // Default gray for unknown lines
-//     }
-//     .to_string()
-// }

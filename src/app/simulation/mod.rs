@@ -260,49 +260,90 @@ fn create_vehicle_layer(id: &str, vehicle_type: &str, color: &str) -> JsValue {
     layer.into()
 }
 
-/// Start the animation loop for vehicle movement
+/// Start the animation loop for vehicle movement with throttled updates
 fn start_animation_loop() {
     with_context("start_animation_loop", LogCategory::Simulation, |logger| {
-        logger.debug("Starting animation loop for vehicle movement");
+        logger.debug("Starting throttled animation loop for vehicle movement");
 
-        // Create a callback that will run on each animation frame
-        let animation_callback = Closure::wrap(Box::new(move || {
-            // Only update if not paused
+        // Set a fixed interval for updates instead of using requestAnimationFrame
+        let update_interval_ms = 1000 / 30; // 15 FPS
+
+        // Create a JavaScript setInterval to handle the animation loop
+        let js_code = format!(
+            r#"
+            // Clear any existing interval
+            if (window.__rustAnimIntervalId) {{
+                clearInterval(window.__rustAnimIntervalId);
+            }}
+
+            // Set new interval for animation updates
+            window.__rustAnimIntervalId = setInterval(function() {{
+                // Only call the Rust function if defined
+                if (typeof window.rust_animation_tick === 'function') {{
+                    window.rust_animation_tick();
+                }}
+            }}, {});
+
+            // Return the interval ID
+            window.__rustAnimIntervalId;
+        "#,
+            update_interval_ms
+        );
+
+        // Execute the JavaScript to start the interval
+        let interval_id = js_sys::eval(&js_code)
+            .unwrap_or(JsValue::from_f64(0.0))
+            .as_f64()
+            .unwrap_or(0.0) as i32;
+
+        // Store the interval ID where animation frame ID would normally go
+        set_animation_frame_id(interval_id);
+
+        // Create the animation tick function
+        let tick_closure = Closure::wrap(Box::new(move || {
+            // Process a single animation frame
             let should_continue = with_simulation_state(|sim_state| {
                 if !sim_state.is_paused {
-                    // 1. Update vehicle positions
+                    // Update vehicle positions
                     update_vehicle_positions(sim_state);
 
-                    // 2. Update MapLibre with new positions
+                    // Update MapLibre with new positions
                     update_maplibre_vehicles(sim_state);
                 }
 
-                // Return whether we're paused to determine if we should request another frame
-                !sim_state.is_paused
+                // Return true to keep the interval running
+                // The actual pause state is checked on each tick
+                true
             });
 
-            // Request next animation frame if not paused
-            if should_continue {
-                request_animation_frame();
+            // If the simulation should be completely stopped (not just paused)
+            if !should_continue {
+                // Clear the interval
+                let clear_js = r#"
+                    if (window.__rustAnimIntervalId) {
+                        clearInterval(window.__rustAnimIntervalId);
+                        window.__rustAnimIntervalId = null;
+                    }
+                "#;
+                let _ = js_sys::eval(clear_js);
             }
         }) as Box<dyn FnMut()>);
 
-        // Store the callback and request first frame
+        // Store the tick function in the window object
         if let Some(window) = window() {
-            match window.request_animation_frame(animation_callback.as_ref().unchecked_ref()) {
-                Ok(id) => {
-                    // Store the callback and frame ID
-                    set_animation_frame_id(id);
+            let _ = js_sys::Reflect::set(
+                &window,
+                &JsValue::from_str("rust_animation_tick"),
+                tick_closure.as_ref(),
+            );
 
-                    logger.debug(&format!("Animation frame requested, ID: {}", id));
+            // Forget the closure so it stays valid
+            tick_closure.forget();
 
-                    // Forget the closure to keep it alive (will be cleaned up when simulation is reset)
-                    animation_callback.forget();
-                }
-                Err(err) => {
-                    logger.error(&format!("Failed to request animation frame: {:?}", err));
-                }
-            }
+            logger.info(&format!(
+                "Animation loop started with throttled updates at {} FPS",
+                1000 / update_interval_ms
+            ));
         } else {
             logger.error("No global window exists, cannot start animation loop");
         }
@@ -358,12 +399,11 @@ fn request_animation_frame() {
 
 /// Update positions of all vehicles based on their speed and direction
 fn update_vehicle_positions(sim_state: &mut SimulationState) {
-    // This function is called many times per second - avoid excessive logging
-    // Only log periodically for debugging purposes
+    // This function is called less frequently now - adjust logging frequency
     static mut POSITION_UPDATE_COUNTER: u32 = 0;
     let should_log = unsafe {
         POSITION_UPDATE_COUNTER += 1;
-        POSITION_UPDATE_COUNTER % 300 == 0 // Log roughly every 5 seconds (assuming 60fps)
+        POSITION_UPDATE_COUNTER % 75 == 0 // Log roughly every 5 seconds (assuming 15fps)
     };
 
     if should_log {
@@ -416,11 +456,11 @@ fn update_vehicle_positions(sim_state: &mut SimulationState) {
 
 /// Update MapLibre with the current vehicle positions
 fn update_maplibre_vehicles(sim_state: &SimulationState) {
-    // This function is called many times per second - avoid excessive logging
+    // This function is called less frequently now - adjust logging frequency
     static mut MAPLIBRE_UPDATE_COUNTER: u32 = 0;
     let should_log = unsafe {
         MAPLIBRE_UPDATE_COUNTER += 1;
-        MAPLIBRE_UPDATE_COUNTER % 600 == 0 // Log roughly every 10 seconds (assuming 60fps)
+        MAPLIBRE_UPDATE_COUNTER % 150 == 0 // Log roughly every 10 seconds (assuming 15fps)
     };
 
     if should_log {
@@ -513,12 +553,10 @@ pub fn toggle_simulation() {
     with_context("toggle_simulation", LogCategory::Simulation, |logger| {
         let is_now_paused = toggle_pause();
 
-        // If we're resuming, restart the animation loop
-        if !is_now_paused {
-            logger.info("Resuming simulation, restarting animation loop");
-            start_animation_loop();
-        } else {
+        if is_now_paused {
             logger.info("Pausing simulation");
+        } else {
+            logger.info("Resuming simulation");
         }
     })
 }
@@ -528,15 +566,21 @@ pub fn reset_simulation(tfl_data: Option<TflDataRepository>) {
     with_context("reset_simulation", LogCategory::Simulation, |logger| {
         logger.info("Resetting simulation...");
 
-        // Cancel current animation frame if one is active
+        // Cancel current animation interval if one is active
         if let Some(id) = get_animation_frame_id() {
-            if let Some(window) = window() {
-                if let Err(err) = window.cancel_animation_frame(id) {
-                    logger.error(&format!("Failed to cancel animation frame: {:?}", err));
-                } else {
-                    logger.debug(&format!("Canceled animation frame ID: {}", id));
-                }
-            }
+            let clear_js = format!(
+                r#"
+                if (window.__rustAnimIntervalId) {{
+                    clearInterval(window.__rustAnimIntervalId);
+                    window.__rustAnimIntervalId = null;
+                    console.log("Cleared animation interval: {}")
+                }}
+            "#,
+                id
+            );
+            let _ = js_sys::eval(&clear_js);
+
+            logger.debug(&format!("Canceled animation interval ID: {}", id));
         }
 
         // Reset state and recreate everything

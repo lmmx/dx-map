@@ -207,8 +207,8 @@ pub fn initialize_vehicles(routes: &[Route]) -> Vec<Vehicle> {
 
     for route in routes {
         let vehicle_count = match route.vehicle_type {
-            VehicleType::Train => 10, // 10 trains per line
-            VehicleType::Bus => 20,   // 20 buses per route
+            VehicleType::Train => 2, // 2 trains per route
+            VehicleType::Bus => 2,   // 2 buses per route
         };
 
         // Create vehicles distributed along the route
@@ -231,7 +231,7 @@ pub fn initialize_vehicles(routes: &[Route]) -> Vec<Vehicle> {
                 vehicle_type: route.vehicle_type.clone(),
                 route_index: route.id,
                 position: Math::random(), // Random position along segment
-                speed: 0.005 + Math::random() * 0.01, // Random speed
+                speed: 0.005 + Math::random() * 0.05, // Random speed
                 direction,
                 last_station,
                 next_station,
