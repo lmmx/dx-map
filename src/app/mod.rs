@@ -6,9 +6,12 @@ use dioxus::prelude::*;
 
 mod canvas;
 mod key_panel;
+mod line_css;
 mod layer_panel;
 mod simulation; // New module for vehicle simulation
 
+use crate::data::line_definitions::get_line_color;
+use crate::app::line_css::LineCss;
 use crate::data::TflDataRepository;
 use crate::maplibre::helpers;
 use crate::utils::log::{self, LogCategory, with_context};
@@ -297,6 +300,8 @@ pub fn app() -> Element {
     });
 
     rsx! {
+        LineCss {}
+
         document::Link { rel: "icon", href: FAVICON }
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TFL_CSS }
@@ -464,33 +469,34 @@ fn add_tfl_data_to_map(map: &crate::maplibre::bindings::Map, tfl_data: TflDataRe
     });
 }
 
-/// Helper function to get the color for a specific TfL line
-fn get_line_color(line_id: &str) -> String {
-    match line_id {
-        "bakerloo" => "#B36305",
-        "central" => "#E32017",
-        "circle" => "#FFD300",
-        "district" => "#00782A",
-        "hammersmith-city" => "#F3A9BB",
-        "jubilee" => "#A0A5A9",
-        "metropolitan" => "#9B0056",
-        "northern" => "#000000",
-        "piccadilly" => "#003688",
-        "victoria" => "#0098D4",
-        "waterloo-city" => "#95CDBA",
-        "dlr" => "#00A4A7",
-        "london-overground" => "#EE7C0E",
-        "elizabeth" => "#6950A1",
-        "tram" => "#84B817",
-        "cable-car" => "#E21836",
-        "thameslink" => "#C1007C",
-        "liberty" => "#4C6366",
-        "lioness" => "#FFA32B",
-        "mildmay" => "#088ECC",
-        "suffragette" => "#59C274",
-        "weaver" => "#B43983",
-        "windrush" => "#FF2E24",
-        _ => "#777777", // Default gray for unknown lines
-    }
-    .to_string()
-}
+// DEPRECATED FOR crate::data::line_definitions::get_line_color(line_id)
+// /// Helper function to get the color for a specific TfL line
+// fn get_line_color(line_id: &str) -> String {
+//     match line_id {
+//         "bakerloo" => "#B36305",
+//         "central" => "#E32017",
+//         "circle" => "#FFD300",
+//         "district" => "#00782A",
+//         "hammersmith-city" => "#F3A9BB",
+//         "jubilee" => "#A0A5A9",
+//         "metropolitan" => "#9B0056",
+//         "northern" => "#000000",
+//         "piccadilly" => "#003688",
+//         "victoria" => "#0098D4",
+//         "waterloo-city" => "#95CDBA",
+//         "dlr" => "#00A4A7",
+//         "london-overground" => "#EE7C0E",
+//         "elizabeth" => "#6950A1",
+//         "tram" => "#84B817",
+//         "cable-car" => "#E21836",
+//         "thameslink" => "#C1007C",
+//         "liberty" => "#4C6366",
+//         "lioness" => "#FFA32B",
+//         "mildmay" => "#088ECC",
+//         "suffragette" => "#59C274",
+//         "weaver" => "#B43983",
+//         "windrush" => "#FF2E24",
+//         _ => "#777777", // Default gray for unknown lines
+//     }
+//     .to_string()
+// }
