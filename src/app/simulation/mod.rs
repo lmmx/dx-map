@@ -11,8 +11,8 @@ mod state;
 
 pub use model::{VehicleType, build_sample_routes, initialize_vehicles};
 pub use state::{
-    SimulationState, get_animation_frame_id, initialize_state, set_animation_frame_id,
-    toggle_pause, with_simulation_state, with_simulation_state_ref, get_vehicle_count, is_paused,
+    SimulationState, get_animation_frame_id, get_vehicle_count, initialize_state, is_paused,
+    set_animation_frame_id, toggle_pause, with_simulation_state, with_simulation_state_ref,
 };
 
 // MapLibre integration components
@@ -140,110 +140,201 @@ pub fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
 
 /// Register vehicle layers with MapLibre GL
 fn register_vehicle_layers() {
-    with_context("register_vehicle_layers", LogCategory::Simulation, |logger| {
-        logger.info("Registering vehicle layers with MapLibre using Rust bindings");
+    with_context(
+        "register_vehicle_layers",
+        LogCategory::Simulation,
+        |logger| {
+            logger.info("Registering vehicle layers with MapLibre using Rust bindings");
 
-        // Get the map instance from window
-        if let Some(window) = window() {
-            if let Ok(map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
-                let map: crate::maplibre::bindings::Map = map_instance.into();
+            // Get the map instance from window
+            if let Some(window) = window() {
+                if let Ok(map_instance) =
+                    js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance"))
+                {
+                    let map: crate::maplibre::bindings::Map = map_instance.into();
 
-                // Check if source already exists
-                if map.get_source("vehicles-source").is_none() {
-                    // Create GeoJSON source for vehicles
-                    let source = {
-                        let obj = Object::new();
-                        Reflect::set(&obj, &JsValue::from_str("type"), &JsValue::from_str("geojson")).unwrap();
+                    // Check if source already exists
+                    if map.get_source("vehicles-source").is_none() {
+                        // Create GeoJSON source for vehicles
+                        let source = {
+                            let obj = Object::new();
+                            Reflect::set(
+                                &obj,
+                                &JsValue::from_str("type"),
+                                &JsValue::from_str("geojson"),
+                            )
+                            .unwrap();
 
-                        let data = Object::new();
-                        Reflect::set(&data, &JsValue::from_str("type"), &JsValue::from_str("FeatureCollection")).unwrap();
-                        Reflect::set(&data, &JsValue::from_str("features"), &js_sys::Array::new()).unwrap();
+                            let data = Object::new();
+                            Reflect::set(
+                                &data,
+                                &JsValue::from_str("type"),
+                                &JsValue::from_str("FeatureCollection"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &data,
+                                &JsValue::from_str("features"),
+                                &js_sys::Array::new(),
+                            )
+                            .unwrap();
 
-                        Reflect::set(&obj, &JsValue::from_str("data"), &data).unwrap();
-                        obj
-                    };
+                            Reflect::set(&obj, &JsValue::from_str("data"), &data).unwrap();
+                            obj
+                        };
 
-                    // Add the source
-                    map.add_source("vehicles-source", &source);
+                        // Add the source
+                        map.add_source("vehicles-source", &source);
 
-                    // Create bus layer
-                    let bus_layer = {
-                        let layer = Object::new();
-                        Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str("buses-layer")).unwrap();
-                        Reflect::set(&layer, &JsValue::from_str("type"), &JsValue::from_str("circle")).unwrap();
-                        Reflect::set(&layer, &JsValue::from_str("source"), &JsValue::from_str("vehicles-source")).unwrap();
+                        // Create bus layer
+                        let bus_layer = {
+                            let layer = Object::new();
+                            Reflect::set(
+                                &layer,
+                                &JsValue::from_str("id"),
+                                &JsValue::from_str("buses-layer"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &layer,
+                                &JsValue::from_str("type"),
+                                &JsValue::from_str("circle"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &layer,
+                                &JsValue::from_str("source"),
+                                &JsValue::from_str("vehicles-source"),
+                            )
+                            .unwrap();
 
-                        // Add filter
-                        let filter = js_sys::Array::new();
-                        filter.push(&JsValue::from_str("=="));
+                            // Add filter
+                            let filter = js_sys::Array::new();
+                            filter.push(&JsValue::from_str("=="));
 
-                        let get_expr = js_sys::Array::new();
-                        get_expr.push(&JsValue::from_str("get"));
-                        get_expr.push(&JsValue::from_str("vehicleType"));
+                            let get_expr = js_sys::Array::new();
+                            get_expr.push(&JsValue::from_str("get"));
+                            get_expr.push(&JsValue::from_str("vehicleType"));
 
-                        filter.push(&get_expr);
-                        filter.push(&JsValue::from_str("Bus"));
+                            filter.push(&get_expr);
+                            filter.push(&JsValue::from_str("Bus"));
 
-                        Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
+                            Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
 
-                        // Paint properties
-                        let paint = Object::new();
-                        Reflect::set(&paint, &JsValue::from_str("circle-radius"), &JsValue::from_f64(6.0)).unwrap();
-                        Reflect::set(&paint, &JsValue::from_str("circle-color"), &JsValue::from_str("#0000FF")).unwrap();
-                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-color"), &JsValue::from_str("#FFFFFF")).unwrap();
-                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-width"), &JsValue::from_f64(2.0)).unwrap();
+                            // Paint properties
+                            let paint = Object::new();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-radius"),
+                                &JsValue::from_f64(6.0),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-color"),
+                                &JsValue::from_str("#0000FF"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-stroke-color"),
+                                &JsValue::from_str("#FFFFFF"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-stroke-width"),
+                                &JsValue::from_f64(2.0),
+                            )
+                            .unwrap();
 
-                        Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
-                        layer
-                    };
+                            Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
+                            layer
+                        };
 
-                    // Add bus layer
-                    map.add_layer(&bus_layer);
+                        // Add bus layer
+                        map.add_layer(&bus_layer);
 
-                    // Create train layer (similar to bus layer but different color and filter)
-                    let train_layer = {
-                        let layer = Object::new();
-                        Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str("trains-layer")).unwrap();
-                        Reflect::set(&layer, &JsValue::from_str("type"), &JsValue::from_str("circle")).unwrap();
-                        Reflect::set(&layer, &JsValue::from_str("source"), &JsValue::from_str("vehicles-source")).unwrap();
+                        // Create train layer (similar to bus layer but different color and filter)
+                        let train_layer = {
+                            let layer = Object::new();
+                            Reflect::set(
+                                &layer,
+                                &JsValue::from_str("id"),
+                                &JsValue::from_str("trains-layer"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &layer,
+                                &JsValue::from_str("type"),
+                                &JsValue::from_str("circle"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &layer,
+                                &JsValue::from_str("source"),
+                                &JsValue::from_str("vehicles-source"),
+                            )
+                            .unwrap();
 
-                        // Add filter
-                        let filter = js_sys::Array::new();
-                        filter.push(&JsValue::from_str("=="));
+                            // Add filter
+                            let filter = js_sys::Array::new();
+                            filter.push(&JsValue::from_str("=="));
 
-                        let get_expr = js_sys::Array::new();
-                        get_expr.push(&JsValue::from_str("get"));
-                        get_expr.push(&JsValue::from_str("vehicleType"));
+                            let get_expr = js_sys::Array::new();
+                            get_expr.push(&JsValue::from_str("get"));
+                            get_expr.push(&JsValue::from_str("vehicleType"));
 
-                        filter.push(&get_expr);
-                        filter.push(&JsValue::from_str("Train"));
+                            filter.push(&get_expr);
+                            filter.push(&JsValue::from_str("Train"));
 
-                        Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
+                            Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
 
-                        // Paint properties
-                        let paint = Object::new();
-                        Reflect::set(&paint, &JsValue::from_str("circle-radius"), &JsValue::from_f64(6.0)).unwrap();
-                        Reflect::set(&paint, &JsValue::from_str("circle-color"), &JsValue::from_str("#FF0000")).unwrap();
-                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-color"), &JsValue::from_str("#FFFFFF")).unwrap();
-                        Reflect::set(&paint, &JsValue::from_str("circle-stroke-width"), &JsValue::from_f64(2.0)).unwrap();
+                            // Paint properties
+                            let paint = Object::new();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-radius"),
+                                &JsValue::from_f64(6.0),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-color"),
+                                &JsValue::from_str("#FF0000"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-stroke-color"),
+                                &JsValue::from_str("#FFFFFF"),
+                            )
+                            .unwrap();
+                            Reflect::set(
+                                &paint,
+                                &JsValue::from_str("circle-stroke-width"),
+                                &JsValue::from_f64(2.0),
+                            )
+                            .unwrap();
 
-                        Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
-                        layer
-                    };
+                            Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
+                            layer
+                        };
 
-                    // Add train layer
-                    map.add_layer(&train_layer);
-                    logger.info("Vehicle layers successfully added using Rust bindings");
+                        // Add train layer
+                        map.add_layer(&train_layer);
+                        logger.info("Vehicle layers successfully added using Rust bindings");
+                    } else {
+                        logger.info("Vehicle source already exists, skipping layer creation");
+                    }
                 } else {
-                    logger.info("Vehicle source already exists, skipping layer creation");
+                    logger.error("Could not get mapInstance from window");
                 }
             } else {
-                logger.error("Could not get mapInstance from window");
+                logger.error("Window object not available");
             }
-        } else {
-            logger.error("Window object not available");
-        }
-    })
+        },
+    )
 }
 
 /// Start the animation loop for vehicle movement

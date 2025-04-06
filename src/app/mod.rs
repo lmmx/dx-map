@@ -7,9 +7,9 @@ use dioxus::prelude::*;
 mod canvas;
 mod key_panel;
 mod layer_panel;
-mod simulation_panel;
 mod line_css;
-mod simulation; // New module for vehicle simulation
+mod simulation;
+mod simulation_panel; // New module for vehicle simulation
 
 use crate::app::line_css::LineCss;
 use crate::data::TflDataRepository;
@@ -19,8 +19,8 @@ use crate::utils::log::{self, LogCategory, with_context};
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
-use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use simulation_panel::SimulationPanel;
+use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;
 
 // If you have images or CSS as assets, define them with Dioxus' asset! macro
@@ -308,57 +308,60 @@ pub fn app() -> Element {
 
     // Add an effect to set up the simulation panel connection
     use_effect(move || {
-        with_context("app::simulation_panel_connection", LogCategory::App, |logger| {
-            logger.info("Setting up simulation panel connection to JavaScript");
-    
-            // Create a clone of the signal for the closure
-            let mut show_sim = show_simulation_panel.clone();
-    
-            // Create a closure that will open the simulation panel when called from JavaScript
-            let open_sim_callback = Closure::wrap(Box::new(move || {
-                log::info_with_category(
-                    LogCategory::App,
-                    "openTflSimulationPanel called from JavaScript",
-                );
-                show_sim.set(true);
-            }) as Box<dyn FnMut()>);
-    
-            // Expose the closure to JavaScript
-            if let Some(window) = window() {
-                if let Err(e) = js_sys::Reflect::set(
-                    &window,
-                    &JsValue::from_str("openTflSimulationPanel"),
-                    open_sim_callback.as_ref(),
-                ) {
-                    logger.error(&format!("Failed to set openTflSimulationPanel: {:?}", e));
-                } else {
-                    logger.info("Successfully exposed openTflSimulationPanel to JavaScript");
+        with_context(
+            "app::simulation_panel_connection",
+            LogCategory::App,
+            |logger| {
+                logger.info("Setting up simulation panel connection to JavaScript");
+
+                // Create a clone of the signal for the closure
+                let mut show_sim = show_simulation_panel.clone();
+
+                // Create a closure that will open the simulation panel when called from JavaScript
+                let open_sim_callback = Closure::wrap(Box::new(move || {
+                    log::info_with_category(
+                        LogCategory::App,
+                        "openTflSimulationPanel called from JavaScript",
+                    );
+                    show_sim.set(true);
+                }) as Box<dyn FnMut()>);
+
+                // Expose the closure to JavaScript
+                if let Some(window) = window() {
+                    if let Err(e) = js_sys::Reflect::set(
+                        &window,
+                        &JsValue::from_str("openTflSimulationPanel"),
+                        open_sim_callback.as_ref(),
+                    ) {
+                        logger.error(&format!("Failed to set openTflSimulationPanel: {:?}", e));
+                    } else {
+                        logger.info("Successfully exposed openTflSimulationPanel to JavaScript");
+                    }
                 }
-            }
-    
-            // Forget the closure to prevent memory leaks
-            open_sim_callback.forget();
-        });
+
+                // Forget the closure to prevent memory leaks
+                open_sim_callback.forget();
+            },
+        );
     });
-    
+
     // Add an effect to update the simulation vehicle count
     use_effect(move || {
         let timer = std::time::Duration::from_secs(1);
-    
+
         let mut update_vehicle_count = move || {
             if *show_simulation_panel.read() {
                 // Get the vehicle count from the simulation state
-                let count = simulation::with_simulation_state_ref(|state| {
-                    state.vehicles.len()
-                });
+                let count = simulation::with_simulation_state_ref(|state| state.vehicles.len());
                 vehicle_count.set(Some(count));
             }
         };
-    
+
         // Set up an interval to update the vehicle count
         let mut interval_handle = None;
         if let Some(window) = window() {
-            let callback = Closure::wrap(Box::new(update_vehicle_count.clone()) as Box<dyn FnMut()>);
+            let callback =
+                Closure::wrap(Box::new(update_vehicle_count.clone()) as Box<dyn FnMut()>);
             if let Ok(handle) = window.set_interval_with_callback_and_timeout_and_arguments(
                 callback.as_ref().unchecked_ref(),
                 1000,
@@ -368,10 +371,10 @@ pub fn app() -> Element {
             }
             callback.forget();
         }
-    
+
         // Run the function once immediately
         update_vehicle_count();
-    
+
         // Return cleanup function
         (move || {
             if let Some(handle) = interval_handle {

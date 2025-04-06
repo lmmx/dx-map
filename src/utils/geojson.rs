@@ -33,17 +33,16 @@ pub struct Feature {
 pub enum Geometry {
     #[serde(rename = "Point")]
     Point { coordinates: [f64; 2] },
-    
+
     #[serde(rename = "LineString")]
     LineString { coordinates: Vec<[f64; 2]> },
-    
     // Add other geometry types as needed
 }
 
 /// Serialize GeoJSON to JsValue
 pub fn to_js_value<T: Serialize>(value: &T) -> Result<JsValue, JsError> {
     let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
-    
+
     match value.serialize(&serializer) {
         Ok(js_value) => Ok(js_value),
         Err(err) => Err(JsError::new(&format!(

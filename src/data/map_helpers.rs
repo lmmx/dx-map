@@ -1,47 +1,11 @@
 use super::model::{Platform, Station};
-use crate::utils::geojson::{Feature, FeatureCollection, Geometry, GeoJsonSource, to_js_value};
 use crate::data::TflDataRepository;
+use crate::utils::geojson::{Feature, FeatureCollection, GeoJsonSource, Geometry, to_js_value};
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
 use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::{JsError, JsValue};
-
-// /// GeoJSON source specification
-// #[derive(Debug, Serialize)]
-// pub struct GeoJsonSourceSpec {
-//     pub r#type: String,
-//     pub data: FeatureCollection,
-// }
-// 
-// /// GeoJSON FeatureCollection
-// #[derive(Debug, Serialize)]
-// pub struct FeatureCollection {
-//     pub r#type: String,
-//     pub features: Vec<Feature>,
-// }
-// 
-// /// GeoJSON Feature
-// #[derive(Debug, Serialize)]
-// pub struct Feature {
-//     pub r#type: String,
-//     pub geometry: FeatureGeometry,
-//     pub properties: FeatureProperties,
-// }
-// 
-// /// GeoJSON Geometry
-// #[derive(Debug, Serialize)]
-// pub struct FeatureGeometry {
-//     pub r#type: String,
-//     pub coordinates: Vec<[f64; 2]>,
-// }
-// 
-// /// GeoJSON Properties
-// #[derive(Debug, Serialize)]
-// pub struct FeatureProperties {
-//     pub line_id: String,
-//     pub segment_id: usize,
-// }
 
 /// Convert a list of stations into a format suitable for MapLibre GeoJSON
 pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
