@@ -3,7 +3,6 @@ class SimulationControl {
   constructor() {
     this._map = null;
     this._container = null;
-    this._simulationPanel = null;
   }
 
   onAdd(map) {
@@ -21,64 +20,15 @@ class SimulationControl {
     this._button.setAttribute('aria-label', 'Simulation Controls');
     this._button.innerHTML = '▶';
 
-    // Create the simulation panel (initially hidden)
-    this._simulationPanel = document.createElement('div');
-    this._simulationPanel.className = 'simulation-panel';
-    this._simulationPanel.style.display = 'none';
-
-    // Add header
-    const header = document.createElement('h3');
-    header.textContent = 'TfL Vehicle Simulation';
-
-    // Add controls
-    const controls = document.createElement('div');
-    controls.className = 'simulation-controls';
-
-    const playPauseButton = document.createElement('button');
-    playPauseButton.id = 'play-pause-simulation';
-    playPauseButton.textContent = 'Play/Pause';
-
-    const resetButton = document.createElement('button');
-    resetButton.id = 'reset-simulation';
-    resetButton.textContent = 'Reset';
-
-    controls.appendChild(playPauseButton);
-    controls.appendChild(resetButton);
-
-    // Add close button
-    const closeButton = document.createElement('button');
-    closeButton.className = 'close-button';
-    closeButton.textContent = 'Close';
-
-    // Add components to the panel
-    this._simulationPanel.appendChild(header);
-    this._simulationPanel.appendChild(controls);
-    this._simulationPanel.appendChild(closeButton);
-
-    // Add panel to document body
-    document.body.appendChild(this._simulationPanel);
-
     // Add button to container
     this._container.appendChild(this._button);
 
-    // Add event listeners
+    // Add event listener to show the Rust-managed panel
     this._button.addEventListener('click', () => {
-      this._simulationPanel.style.display = this._simulationPanel.style.display === 'none' ? 'block' : 'none';
-    });
-
-    closeButton.addEventListener('click', () => {
-      this._simulationPanel.style.display = 'none';
-    });
-
-    playPauseButton.addEventListener('click', () => {
-      if (window.SimulationController) {
-        window.SimulationController.toggle();
-      }
-    });
-
-    resetButton.addEventListener('click', () => {
-      if (window.SimulationController) {
-        window.SimulationController.reset();
+      if (window.openTflSimulationPanel) {
+        window.openTflSimulationPanel();
+      } else {
+        console.log("Simulation button click failed: no openTflSimulationPanel exposed to JS on the window");
       }
     });
 
@@ -88,10 +38,6 @@ class SimulationControl {
   onRemove() {
     if (this._container && this._container.parentNode) {
       this._container.parentNode.removeChild(this._container);
-    }
-
-    if (this._simulationPanel && this._simulationPanel.parentNode) {
-      this._simulationPanel.parentNode.removeChild(this._simulationPanel);
     }
 
     this._map = null;

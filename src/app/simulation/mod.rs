@@ -9,10 +9,10 @@ use web_sys::window;
 mod model;
 mod state;
 
-use model::{VehicleType, build_sample_routes, initialize_vehicles};
-use state::{
+pub use model::{VehicleType, build_sample_routes, initialize_vehicles};
+pub use state::{
     SimulationState, get_animation_frame_id, initialize_state, set_animation_frame_id,
-    toggle_pause, with_simulation_state,
+    toggle_pause, with_simulation_state, with_simulation_state_ref, get_vehicle_count, is_paused,
 };
 
 // MapLibre integration components
@@ -104,7 +104,7 @@ pub fn expose_simulation_functions(tfl_data: Option<TflDataRepository>) -> Resul
 // -------------------
 
 /// Initialize the vehicle simulation
-fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
+pub fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
     with_context("initialize_simulation", LogCategory::Simulation, |logger| {
         logger.info("Initializing vehicle simulation...");
 
@@ -488,7 +488,7 @@ fn serialize_geojson_data(geojson: &Object) -> String {
 }
 
 /// Toggle the simulation pause state
-fn toggle_simulation() {
+pub fn toggle_simulation() {
     with_context("toggle_simulation", LogCategory::Simulation, |logger| {
         let is_now_paused = toggle_pause();
 
@@ -503,7 +503,7 @@ fn toggle_simulation() {
 }
 
 /// Reset the simulation
-fn reset_simulation(tfl_data: Option<TflDataRepository>) {
+pub fn reset_simulation(tfl_data: Option<TflDataRepository>) {
     with_context("reset_simulation", LogCategory::Simulation, |logger| {
         logger.info("Resetting simulation...");
 

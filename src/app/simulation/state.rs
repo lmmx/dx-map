@@ -53,6 +53,13 @@ pub fn toggle_pause() -> bool {
     })
 }
 
+pub fn is_paused() -> bool {
+    SIMULATION_STATE.with(|state| {
+        let sim_state = state.borrow();
+        sim_state.is_paused
+    })
+}
+
 /// Get a reference to the current animation frame ID if it exists
 pub fn get_animation_frame_id() -> Option<i32> {
     SIMULATION_STATE.with(|state| {
@@ -81,6 +88,11 @@ where
         let sim_state = state.borrow();
         f(&sim_state)
     })
+}
+
+/// Get the vehicle count
+pub fn get_vehicle_count() -> usize {
+    with_simulation_state_ref(|state| state.vehicles.len())
 }
 
 /// Debug function to log important simulation state
