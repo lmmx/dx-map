@@ -6,7 +6,7 @@ use wasm_bindgen::{JsError, JsValue};
 #[derive(Debug, Serialize)]
 pub struct GeoJsonSource {
     #[serde(rename = "type")]
-    pub source_type: String,
+    pub source_type: &'static str, // Always "geojson"
     pub data: FeatureCollection,
 }
 
@@ -14,7 +14,7 @@ pub struct GeoJsonSource {
 #[derive(Debug, Serialize)]
 pub struct FeatureCollection {
     #[serde(rename = "type")]
-    pub collection_type: String,
+    pub collection_type: &'static str, // Always "FeatureCollection"
     pub features: Vec<Feature>,
 }
 
@@ -22,7 +22,7 @@ pub struct FeatureCollection {
 #[derive(Debug, Serialize)]
 pub struct Feature {
     #[serde(rename = "type")]
-    pub feature_type: String,
+    pub feature_type: &'static str, // Always "Feature"
     pub geometry: Geometry,
     pub properties: serde_json::Value,
 }
@@ -37,6 +37,40 @@ pub enum Geometry {
     #[serde(rename = "LineString")]
     LineString { coordinates: Vec<[f64; 2]> },
     // Add other geometry types as needed
+}
+
+/// Create a new GeoJSON source with a FeatureCollection
+pub fn new_geojson_source(features: Vec<Feature>) -> GeoJsonSource {
+    GeoJsonSource {
+        source_type: "geojson",
+        data: FeatureCollection {
+            collection_type: "FeatureCollection",
+            features,
+        },
+    }
+}
+
+/// Create a new point feature
+pub fn new_point_feature(lon: f64, lat: f64, properties: serde_json::Value) -> Feature {
+    Feature {
+        feature_type: "Feature",
+        geometry: Geometry::Point {
+            coordinates: [lon, lat],
+        },
+        properties,
+    }
+}
+
+/// Create a new line string feature
+pub fn new_linestring_feature(
+    coordinates: Vec<[f64; 2]>,
+    properties: serde_json::Value,
+) -> Feature {
+    Feature {
+        feature_type: "Feature",
+        geometry: Geometry::LineString { coordinates },
+        properties,
+    }
 }
 
 /// Serialize GeoJSON to JsValue

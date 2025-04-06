@@ -1,6 +1,8 @@
 use super::model::{Platform, Station};
 use crate::data::TflDataRepository;
-use crate::utils::geojson::{Feature, FeatureCollection, GeoJsonSource, Geometry, to_js_value};
+use crate::utils::geojson::{
+    new_geojson_source, new_linestring_feature, new_point_feature, to_js_value,
+};
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
 use serde::Serialize;
@@ -14,52 +16,32 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsError> {
         &format!("Converting {} stations to GeoJSON", stations.len()),
     );
 
-    let mut features = Vec::new();
+    let features: Vec<_> = stations
+        .iter()
+        .filter(|station| !station.lat.is_nan() && !station.lon.is_nan())
+        .map(|station| {
+            // Create properties
+            let properties = serde_json::json!({
+                "id": station.station_unique_id,
+                "name": station.station_name,
+                "fareZones": station.fare_zones,
+                "wifi": station.wifi,
+            });
 
-    for station in stations {
-        // Skip stations with invalid coordinates
-        if station.lat.is_nan() || station.lon.is_nan() {
-            continue;
-        }
+            // Create the feature using our helper
+            new_point_feature(station.lon, station.lat, properties)
+        })
+        .collect();
 
-        // Create properties as a JSON object
-        let properties = serde_json::json!({
-            "id": station.station_unique_id,
-            "name": station.station_name,
-            "fareZones": station.fare_zones,
-            "wifi": station.wifi,
-        });
-
-        // Create a feature for this station
-        let feature = Feature {
-            feature_type: "Feature".to_string(),
-            geometry: Geometry::Point {
-                coordinates: [station.lon, station.lat], // Note: GeoJSON is [lng, lat]
-            },
-            properties,
-        };
-
-        features.push(feature);
-    }
-
-    // Store the length before moving the vector
+    // Log the count
     let feature_count = features.len();
-
-    // Create the GeoJSON source
-    let geojson_source = GeoJsonSource {
-        source_type: "geojson".to_string(),
-        data: FeatureCollection {
-            collection_type: "FeatureCollection".to_string(),
-            features,
-        },
-    };
-
     log::debug_with_category(
         LogCategory::Map,
         &format!("Created GeoJSON with {} features", feature_count),
     );
 
-    // Convert to JsValue
+    // Create the source and serialise
+    let geojson_source = new_geojson_source(features);
     to_js_value(&geojson_source)
 }
 
@@ -104,12 +86,11 @@ pub fn line_to_geojson(
     );
 
     // Get coordinates for all stations on this line
-    let mut coordinates = Vec::new();
-    for station_id in station_ids {
-        if let Some(station) = stations_by_id.get(station_id) {
-            coordinates.push([station.lon, station.lat]);
-        }
-    }
+    let coordinates: Vec<[f64; 2]> = station_ids
+        .iter()
+        .filter_map(|id| stations_by_id.get(id))
+        .map(|station| [station.lon, station.lat])
+        .collect();
 
     // We need at least 2 points to form a line
     if coordinates.len() < 2 {
@@ -119,29 +100,12 @@ pub fn line_to_geojson(
         )));
     }
 
-    // Create properties as a JSON object
-    let properties = serde_json::json!({
-        "name": line_name,
-    });
+    // Create properties and feature
+    let properties = serde_json::json!({ "name": line_name });
+    let feature = new_linestring_feature(coordinates.clone(), properties);
 
-    // Create a GeoJSON LineString feature
-    let feature = Feature {
-        feature_type: "Feature".to_string(),
-        geometry: Geometry::LineString {
-            coordinates: coordinates.clone(),
-        },
-        properties,
-    };
-
-    // Create the GeoJSON source
-    let geojson_source = GeoJsonSource {
-        source_type: "geojson".to_string(),
-        data: FeatureCollection {
-            collection_type: "FeatureCollection".to_string(),
-            features: vec![feature],
-        },
-    };
-
+    // Create source and log
+    let geojson_source = new_geojson_source(vec![feature]);
     log::debug_with_category(
         LogCategory::Map,
         &format!(
@@ -246,42 +210,24 @@ pub fn route_geometries_to_geojson(
     line_id: &str,
     geometries: &Vec<Vec<[f64; 2]>>,
 ) -> Result<JsValue, JsError> {
-    let mut features = Vec::new();
+    // Create features for each non-empty geometry
+    let features: Vec<_> = geometries
+        .iter()
+        .enumerate()
+        .filter(|(_, coords)| !coords.is_empty())
+        .map(|(i, coords)| {
+            let properties = serde_json::json!({
+                "line_id": line_id,
+                "segment_id": i,
+            });
 
-    // Process each route segment
-    for (i, coordinates) in geometries.iter().enumerate() {
-        // Skip empty geometries
-        if coordinates.is_empty() {
-            continue;
-        }
+            new_linestring_feature(coords.clone(), properties)
+        })
+        .collect();
 
-        let properties = serde_json::json!({
-            "line_id": line_id,
-            "segment_id": i,
-        });
-
-        // Create a GeoJSON LineString feature
-        let feature = Feature {
-            feature_type: "Feature".to_string(),
-            geometry: Geometry::LineString {
-                coordinates: coordinates.clone(),
-            },
-            properties,
-        };
-
-        features.push(feature);
-    }
-
-    // Create the GeoJSON source using our structs
-    let geo_json_source = GeoJsonSource {
-        source_type: "geojson".to_string(),
-        data: FeatureCollection {
-            collection_type: "FeatureCollection".to_string(),
-            features,
-        },
-    };
-
-    to_js_value(&geo_json_source)
+    // Create the source and serialize
+    let geojson_source = new_geojson_source(features);
+    to_js_value(&geojson_source)
 }
 
 /// Generate all route geometries as GeoJSON for multiple lines
