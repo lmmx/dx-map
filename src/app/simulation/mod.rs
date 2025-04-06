@@ -1,7 +1,8 @@
 use crate::app::simulation::model::build_routes_from_tfl_data;
 use crate::data::TflDataRepository;
 use crate::utils::geojson::{
-    Feature, FeatureCollection, GeoJsonSource, Geometry, new_point_feature, to_js_value,
+    Feature, FeatureCollection, GeoJsonSource, Geometry, new_geojson_source, new_point_feature,
+    to_js_value,
 };
 use crate::utils::log::{self, LogCategory, with_context};
 use js_sys::{Object, Reflect};
