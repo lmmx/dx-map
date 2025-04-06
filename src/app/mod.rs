@@ -7,6 +7,7 @@ use dioxus::prelude::*;
 mod canvas;
 mod key_panel;
 mod layer_panel;
+mod simulation_panel;
 mod line_css;
 mod simulation; // New module for vehicle simulation
 
@@ -18,7 +19,8 @@ use crate::utils::log::{self, LogCategory, with_context};
 use canvas::Canvas;
 use key_panel::KeyPanel;
 use layer_panel::LayerPanel;
-use wasm_bindgen::{JsValue, closure::Closure};
+use wasm_bindgen::{JsCast, JsValue, closure::Closure};
+use simulation_panel::SimulationPanel;
 use web_sys::window;
 
 // If you have images or CSS as assets, define them with Dioxus' asset! macro
@@ -27,6 +29,7 @@ const LOGO_SVG: Asset = asset!("/assets/header.svg");
 const MAIN_CSS: Asset = asset!("/assets/main.css");
 const TFL_CSS: Asset = asset!("/assets/tfl.css");
 const KEY_CSS: Asset = asset!("/assets/key.css");
+const SIM_CSS: Asset = asset!("/assets/simulation.css");
 const LAYER_CSS: Asset = asset!("/assets/layerswitcher.css");
 
 /// Model to track layer visibility.
@@ -80,6 +83,10 @@ impl Default for TflLayers {
 pub fn app() -> Element {
     let mut show_layers_panel = use_signal(|| false);
     let mut show_key_panel = use_signal(|| false);
+    let mut show_simulation_panel = use_signal(|| false);
+    let mut simulation_initialized = use_signal(|| false);
+    let mut simulation_is_paused = use_signal(|| true);
+    let mut vehicle_count = use_signal(|| Option::<usize>::None);
     let layers = use_signal(TflLayers::default);
     let mut tfl_data = use_signal(TflDataRepository::default);
 
@@ -299,6 +306,82 @@ pub fn app() -> Element {
         })
     });
 
+    // Add an effect to set up the simulation panel connection
+    use_effect(move || {
+        with_context("app::simulation_panel_connection", LogCategory::App, |logger| {
+            logger.info("Setting up simulation panel connection to JavaScript");
+    
+            // Create a clone of the signal for the closure
+            let mut show_sim = show_simulation_panel.clone();
+    
+            // Create a closure that will open the simulation panel when called from JavaScript
+            let open_sim_callback = Closure::wrap(Box::new(move || {
+                log::info_with_category(
+                    LogCategory::App,
+                    "openTflSimulationPanel called from JavaScript",
+                );
+                show_sim.set(true);
+            }) as Box<dyn FnMut()>);
+    
+            // Expose the closure to JavaScript
+            if let Some(window) = window() {
+                if let Err(e) = js_sys::Reflect::set(
+                    &window,
+                    &JsValue::from_str("openTflSimulationPanel"),
+                    open_sim_callback.as_ref(),
+                ) {
+                    logger.error(&format!("Failed to set openTflSimulationPanel: {:?}", e));
+                } else {
+                    logger.info("Successfully exposed openTflSimulationPanel to JavaScript");
+                }
+            }
+    
+            // Forget the closure to prevent memory leaks
+            open_sim_callback.forget();
+        });
+    });
+    
+    // Add an effect to update the simulation vehicle count
+    use_effect(move || {
+        let timer = std::time::Duration::from_secs(1);
+    
+        let mut update_vehicle_count = move || {
+            if *show_simulation_panel.read() {
+                // Get the vehicle count from the simulation state
+                let count = simulation::with_simulation_state_ref(|state| {
+                    state.vehicles.len()
+                });
+                vehicle_count.set(Some(count));
+            }
+        };
+    
+        // Set up an interval to update the vehicle count
+        let mut interval_handle = None;
+        if let Some(window) = window() {
+            let callback = Closure::wrap(Box::new(update_vehicle_count.clone()) as Box<dyn FnMut()>);
+            if let Ok(handle) = window.set_interval_with_callback_and_timeout_and_arguments(
+                callback.as_ref().unchecked_ref(),
+                1000,
+                &js_sys::Array::new(),
+            ) {
+                interval_handle = Some(handle);
+            }
+            callback.forget();
+        }
+    
+        // Run the function once immediately
+        update_vehicle_count();
+    
+        // Return cleanup function
+        (move || {
+            if let Some(handle) = interval_handle {
+                if let Some(window) = window() {
+                    window.clear_interval_with_handle(handle);
+                }
+            }
+        })()
+    });
+
     // Add an effect to connect the key panel (glorified onclick event handler)
     use_effect(move || {
         with_context("app::key_panel_connection", LogCategory::App, |logger| {
@@ -343,6 +426,7 @@ pub fn app() -> Element {
         document::Link { rel: "stylesheet", href: MAIN_CSS }
         document::Link { rel: "stylesheet", href: TFL_CSS }
         document::Link { rel: "stylesheet", href: KEY_CSS }
+        document::Link { rel: "stylesheet", href: SIM_CSS }
         document::Link { rel: "stylesheet", href: LAYER_CSS }
 
         header {
@@ -375,6 +459,33 @@ pub fn app() -> Element {
             KeyPanel {
                 visible: *show_key_panel.read(),
                 on_close: move |_| show_key_panel.set(false)
+            }
+
+            SimulationPanel {
+                visible: *show_simulation_panel.read(),
+                is_paused: *simulation_is_paused.read(),
+                vehicle_count: *vehicle_count.read(),
+                on_close: move |_| show_simulation_panel.set(false),
+                on_toggle: move |_| {
+                    // Check if simulation has been initialized
+                    if !*simulation_initialized.read() {
+                        // If not initialized, initialize it
+                        simulation::initialize_simulation(Some(tfl_data.read().clone()));
+                        simulation_initialized.set(true);
+                        simulation_is_paused.set(false); // Start running
+                    } else {
+                        // Otherwise just toggle pause state
+                        simulation::toggle_simulation();
+                        let is_currently_paused = *simulation_is_paused.read();
+                        simulation_is_paused.set(!is_currently_paused);
+                    }
+                },
+                on_reset: move |_| {
+                    // Reset always initializes
+                    simulation::reset_simulation(Some(tfl_data.read().clone()));
+                    simulation_initialized.set(true);
+                    simulation_is_paused.set(false);
+                }
             }
         }
     }
