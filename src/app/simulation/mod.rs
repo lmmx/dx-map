@@ -1,5 +1,8 @@
 use crate::app::simulation::model::build_routes_from_tfl_data;
 use crate::data::TflDataRepository;
+use crate::utils::geojson::{
+    Feature, FeatureCollection, GeoJsonSource, Geometry, new_point_feature, to_js_value,
+};
 use crate::utils::log::{self, LogCategory, with_context};
 use js_sys::{Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
@@ -144,7 +147,7 @@ fn register_vehicle_layers() {
         "register_vehicle_layers",
         LogCategory::Simulation,
         |logger| {
-            logger.info("Registering vehicle layers with MapLibre using Rust bindings");
+            logger.info("Registering vehicle layers with MapLibre");
 
             // Get the map instance from window
             if let Some(window) = window() {
@@ -153,179 +156,45 @@ fn register_vehicle_layers() {
                 {
                     let map: crate::maplibre::bindings::Map = map_instance.into();
 
-                    // Check if source already exists
-                    if map.get_source("vehicles-source").is_none() {
-                        // Create GeoJSON source for vehicles
-                        let source = {
-                            let obj = Object::new();
-                            Reflect::set(
-                                &obj,
-                                &JsValue::from_str("type"),
-                                &JsValue::from_str("geojson"),
-                            )
-                            .unwrap();
-
-                            let data = Object::new();
-                            Reflect::set(
-                                &data,
-                                &JsValue::from_str("type"),
-                                &JsValue::from_str("FeatureCollection"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &data,
-                                &JsValue::from_str("features"),
-                                &js_sys::Array::new(),
-                            )
-                            .unwrap();
-
-                            Reflect::set(&obj, &JsValue::from_str("data"), &data).unwrap();
-                            obj
+                    // Check if source already exists by checking if layer exists
+                    if map.get_layer("buses-layer").is_none() {
+                        // Create an empty GeoJSON FeatureCollection
+                        let empty_collection = FeatureCollection {
+                            collection_type: "FeatureCollection",
+                            features: Vec::new(),
                         };
 
-                        // Add the source
-                        map.add_source("vehicles-source", &source);
-
-                        // Create bus layer
-                        let bus_layer = {
-                            let layer = Object::new();
-                            Reflect::set(
-                                &layer,
-                                &JsValue::from_str("id"),
-                                &JsValue::from_str("buses-layer"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &layer,
-                                &JsValue::from_str("type"),
-                                &JsValue::from_str("circle"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &layer,
-                                &JsValue::from_str("source"),
-                                &JsValue::from_str("vehicles-source"),
-                            )
-                            .unwrap();
-
-                            // Add filter
-                            let filter = js_sys::Array::new();
-                            filter.push(&JsValue::from_str("=="));
-
-                            let get_expr = js_sys::Array::new();
-                            get_expr.push(&JsValue::from_str("get"));
-                            get_expr.push(&JsValue::from_str("vehicleType"));
-
-                            filter.push(&get_expr);
-                            filter.push(&JsValue::from_str("Bus"));
-
-                            Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
-
-                            // Paint properties
-                            let paint = Object::new();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-radius"),
-                                &JsValue::from_f64(6.0),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-color"),
-                                &JsValue::from_str("#0000FF"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-stroke-color"),
-                                &JsValue::from_str("#FFFFFF"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-stroke-width"),
-                                &JsValue::from_f64(2.0),
-                            )
-                            .unwrap();
-
-                            Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
-                            layer
+                        // Create the GeoJSON source
+                        let geojson_source = GeoJsonSource {
+                            source_type: "geojson",
+                            data: empty_collection,
                         };
 
-                        // Add bus layer
-                        map.add_layer(&bus_layer);
+                        // Serialize to JsValue
+                        match to_js_value(&geojson_source) {
+                            Ok(source_js) => {
+                                // Add the source
+                                map.add_source("vehicles-source", &source_js);
 
-                        // Create train layer (similar to bus layer but different color and filter)
-                        let train_layer = {
-                            let layer = Object::new();
-                            Reflect::set(
-                                &layer,
-                                &JsValue::from_str("id"),
-                                &JsValue::from_str("trains-layer"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &layer,
-                                &JsValue::from_str("type"),
-                                &JsValue::from_str("circle"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &layer,
-                                &JsValue::from_str("source"),
-                                &JsValue::from_str("vehicles-source"),
-                            )
-                            .unwrap();
+                                // Create and add bus layer
+                                let bus_layer =
+                                    create_vehicle_layer("buses-layer", "Bus", "#0000FF");
+                                map.add_layer(&bus_layer);
 
-                            // Add filter
-                            let filter = js_sys::Array::new();
-                            filter.push(&JsValue::from_str("=="));
+                                // Create and add train layer
+                                let train_layer =
+                                    create_vehicle_layer("trains-layer", "Train", "#FF0000");
+                                map.add_layer(&train_layer);
 
-                            let get_expr = js_sys::Array::new();
-                            get_expr.push(&JsValue::from_str("get"));
-                            get_expr.push(&JsValue::from_str("vehicleType"));
-
-                            filter.push(&get_expr);
-                            filter.push(&JsValue::from_str("Train"));
-
-                            Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
-
-                            // Paint properties
-                            let paint = Object::new();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-radius"),
-                                &JsValue::from_f64(6.0),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-color"),
-                                &JsValue::from_str("#FF0000"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-stroke-color"),
-                                &JsValue::from_str("#FFFFFF"),
-                            )
-                            .unwrap();
-                            Reflect::set(
-                                &paint,
-                                &JsValue::from_str("circle-stroke-width"),
-                                &JsValue::from_f64(2.0),
-                            )
-                            .unwrap();
-
-                            Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
-                            layer
-                        };
-
-                        // Add train layer
-                        map.add_layer(&train_layer);
-                        logger.info("Vehicle layers successfully added using Rust bindings");
+                                logger.info("Vehicle layers successfully added");
+                            }
+                            Err(err) => {
+                                logger
+                                    .error(&format!("Failed to create GeoJSON source: {:?}", err));
+                            }
+                        }
                     } else {
-                        logger.info("Vehicle source already exists, skipping layer creation");
+                        logger.info("Vehicle layers already exist, skipping creation");
                     }
                 } else {
                     logger.error("Could not get mapInstance from window");
@@ -335,6 +204,71 @@ fn register_vehicle_layers() {
             }
         },
     )
+}
+
+/// Helper function to create a vehicle layer specification
+fn create_vehicle_layer(id: &str, vehicle_type: &str, color: &str) -> JsValue {
+    let layer = Object::new();
+
+    // Set basic properties
+    Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str(id)).unwrap();
+    Reflect::set(
+        &layer,
+        &JsValue::from_str("type"),
+        &JsValue::from_str("circle"),
+    )
+    .unwrap();
+    Reflect::set(
+        &layer,
+        &JsValue::from_str("source"),
+        &JsValue::from_str("vehicles-source"),
+    )
+    .unwrap();
+
+    // Add filter for vehicle type
+    let filter = js_sys::Array::new();
+    filter.push(&JsValue::from_str("=="));
+
+    let get_expr = js_sys::Array::new();
+    get_expr.push(&JsValue::from_str("get"));
+    get_expr.push(&JsValue::from_str("vehicleType"));
+
+    filter.push(&get_expr);
+    filter.push(&JsValue::from_str(vehicle_type));
+
+    Reflect::set(&layer, &JsValue::from_str("filter"), &filter).unwrap();
+
+    // Add paint properties
+    let paint = Object::new();
+
+    Reflect::set(
+        &paint,
+        &JsValue::from_str("circle-radius"),
+        &JsValue::from_f64(6.0),
+    )
+    .unwrap();
+    Reflect::set(
+        &paint,
+        &JsValue::from_str("circle-color"),
+        &JsValue::from_str(color),
+    )
+    .unwrap();
+    Reflect::set(
+        &paint,
+        &JsValue::from_str("circle-stroke-color"),
+        &JsValue::from_str("#FFFFFF"),
+    )
+    .unwrap();
+    Reflect::set(
+        &paint,
+        &JsValue::from_str("circle-stroke-width"),
+        &JsValue::from_f64(2.0),
+    )
+    .unwrap();
+
+    Reflect::set(&layer, &JsValue::from_str("paint"), &paint).unwrap();
+
+    layer.into()
 }
 
 /// Start the animation loop for vehicle movement
@@ -510,67 +444,89 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
         );
     }
 
-    // Instead of trying to build a complex JS object, let's construct a simple JSON string directly
-    let mut features = Vec::new();
+    // Create features for all vehicles
+    let features: Vec<_> = sim_state
+        .vehicles
+        .iter()
+        .map(|vehicle| {
+            let vehicle_type = match vehicle.vehicle_type {
+                VehicleType::Bus => "Bus",
+                VehicleType::Train => "Train",
+            };
 
-    for vehicle in &sim_state.vehicles {
-        // Format each vehicle as a GeoJSON feature
-        let vehicle_type = match vehicle.vehicle_type {
-            VehicleType::Bus => "Bus",
-            VehicleType::Train => "Train",
-        };
+            // Create properties for this vehicle
+            let properties = serde_json::json!({
+                "id": vehicle.id,
+                "vehicleType": vehicle_type
+            });
 
-        let feature = format!(
-            r#"{{
-                "type": "Feature",
-                "geometry": {{
-                    "type": "Point",
-                    "coordinates": [{}, {}]
-                }},
-                "properties": {{
-                    "id": {},
-                    "vehicleType": "{}"
-                }}
-            }}"#,
-            vehicle.lng, vehicle.lat, vehicle.id, vehicle_type
-        );
+            // Create a point feature
+            Feature {
+                feature_type: "Feature",
+                geometry: Geometry::Point {
+                    coordinates: [vehicle.lng, vehicle.lat],
+                },
+                properties,
+            }
+        })
+        .collect();
 
-        features.push(feature);
-    }
+    // Create the GeoJSON source
+    let geojson_source = GeoJsonSource {
+        source_type: "geojson",
+        data: FeatureCollection {
+            collection_type: "FeatureCollection",
+            features,
+        },
+    };
 
-    // Join all features into a GeoJSON collection
-    let geojson = format!(
-        r#"{{
-            "type": "FeatureCollection",
-            "features": [{}]
-        }}"#,
-        features.join(",")
-    );
+    // Try to get the map instance and update the source
+    if let Some(window) = window() {
+        if let Ok(map_instance) = js_sys::Reflect::get(&window, &JsValue::from_str("mapInstance")) {
+            // Check if the source exists using JS eval for now
+            let has_source = js_sys::eval(
+                "window.mapInstance && window.mapInstance.getSource('vehicles-source') != null",
+            )
+            .unwrap_or(JsValue::from_bool(false))
+            .as_bool()
+            .unwrap_or(false);
 
-    // Update the source in MapLibre
-    let js_code = format!(
-        r#"
-        if (window.mapInstance && window.mapInstance.getSource('vehicles-source')) {{
-            try {{
-                const data = {};
-                window.mapInstance.getSource('vehicles-source').setData(data);
-            }} catch (e) {{
-                console.error("Error updating vehicles source:", e);
-            }}
-        }}
-        "#,
-        geojson
-    );
+            if has_source {
+                // Serialize to JsValue
+                match to_js_value(&geojson_source.data) {
+                    Ok(data) => {
+                        // Update the source data
+                        let js_code = r#"
+                            window.mapInstance.getSource('vehicles-source').setData(arguments[0]);
+                        "#;
 
-    let eval_result = js_sys::eval(&js_code);
-    if should_log && eval_result.is_err() {
-        log::error_with_category(
-            LogCategory::Simulation,
-            &format!(
-                "Failed to update vehicle positions in MapLibre: {:?}",
-                eval_result.err()
-            ),
-        );
+                        if let Err(err) = js_sys::Function::new_with_args("data", js_code)
+                            .call1(&JsValue::NULL, &data)
+                        {
+                            if should_log {
+                                log::error_with_category(
+                                    LogCategory::Simulation,
+                                    &format!("Failed to update vehicle source: {:?}", err),
+                                );
+                            }
+                        }
+                    }
+                    Err(err) => {
+                        if should_log {
+                            log::error_with_category(
+                                LogCategory::Simulation,
+                                &format!("Failed to serialize vehicle data: {:?}", err),
+                            );
+                        }
+                    }
+                }
+            } else if should_log {
+                log::warn_with_category(
+                    LogCategory::Simulation,
+                    "Vehicles source does not exist yet",
+                );
+            }
+        }
     }
 }
 
