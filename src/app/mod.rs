@@ -305,7 +305,7 @@ pub fn app() -> Element {
             logger.info("Setting up key panel connection to JavaScript");
 
             // Create a clone of the signal for the closure
-            let mut show_key = show_key_panel.clone();
+            let mut show_key = show_key_panel;
 
             // Create a closure that will open the key panel when called from JavaScript
             // Don't capture logger in this closure!
@@ -323,7 +323,7 @@ pub fn app() -> Element {
                 if let Err(e) = js_sys::Reflect::set(
                     &window,
                     &JsValue::from_str("openTflKeyPanel"),
-                    &open_key_callback.as_ref(),
+                    open_key_callback.as_ref(),
                 ) {
                     logger.error(&format!("Failed to set openTflKeyPanel: {:?}", e));
                 } else {
