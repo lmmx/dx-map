@@ -144,12 +144,18 @@ pub fn build_routes_from_tfl_data(tfl_data: &TflDataRepository) -> Vec<Route> {
             continue;
         }
 
-        // Determine vehicle type based on line ID
-        let vehicle_type = match line_id.as_str() {
-            "bakerloo" | "central" | "circle" | "district" | "hammersmith-city" | "jubilee"
-            | "metropolitan" | "northern" | "piccadilly" | "victoria" | "waterloo-city"
-            | "elizabeth" | "dlr" => VehicleType::Train,
-            _ => VehicleType::Bus,
+        // Determine vehicle type based on line ID and its first route sequence's mode
+        let route_mode = tfl_data.routes.get(line_id)
+            .and_then(|directions| directions.values().next())
+            .and_then(|response| response.first())
+            .map(|route_sequence| route_sequence.mode.to_lowercase())
+            .unwrap_or_else(|| "train".to_string());
+
+        web_sys::console::log_1(&wasm_bindgen::JsValue::from_str(&format!("Route mode for {}: {}", line_id, route_mode)));
+        
+        let vehicle_type = match route_mode.as_str() {
+            "bus" => VehicleType::Bus,
+            _ => VehicleType::Train,
         };
 
         // Process each route segment for this line
