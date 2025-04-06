@@ -91,13 +91,13 @@ class KeyControl {
       { name: 'Central', className: 'color-line central' },
       { name: 'Circle', className: 'color-line circle' },
       { name: 'District', className: 'color-line district' },
-      { name: 'Hammersmith & City', className: 'color-line hammersmith' },
+      { name: 'Hammersmith & City', className: 'color-line hammersmith-city' },
       { name: 'Jubilee', className: 'color-line jubilee' },
       { name: 'Metropolitan', className: 'color-line metropolitan' },
       { name: 'Northern', className: 'color-line northern' },
       { name: 'Piccadilly', className: 'color-line piccadilly' },
       { name: 'Victoria', className: 'color-line victoria' },
-      { name: 'Waterloo & City', className: 'color-line waterloo' }
+      { name: 'Waterloo & City', className: 'color-line waterloo-city' }
     ]));
 
     // Add Other Rail section
@@ -106,7 +106,7 @@ class KeyControl {
       { name: 'DLR', className: 'color-line dlr' },
       { name: 'Elizabeth Line', className: 'color-line elizabeth' },
       { name: 'Trams', className: 'color-line tram' },
-      { name: 'Cable Car', className: 'color-line cablecar' }
+      { name: 'Cable Car', className: 'color-line cable-car' }
     ]));
 
     // Add Other Features section

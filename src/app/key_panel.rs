@@ -31,7 +31,7 @@ pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
                             td { "{line.name}" }
                             td {
                                 div {
-                                    class: format_args!("color-line {}", line.id.replace("-", "_"))
+                                    class: format_args!("color-line {}", line.id)
                                 }
                             }
                         }
@@ -46,7 +46,7 @@ pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
                             td { "{line.name}" }
                             td {
                                 div {
-                                    class: format_args!("color-line {}", line.id.replace("-", "_"))
+                                    class: format_args!("color-line {}", line.id)
                                 }
                             }
                         }

@@ -80,7 +80,7 @@ pub fn generate_line_css() -> String {
     // Line classes
     for line in LINE_INFOS {
         css.push_str(&format!(".color-line.{} {{ background-color: var(--{}); }}\n", 
-            line.id.replace("-", "_"), line.id));
+            line.id, line.id));
     }
     
     css

@@ -17,22 +17,6 @@
   /* TfL colors */
   --tfl-blue: #0019A8;
   --tfl-red: #DC241F;
-  --bakerloo: #B36305;
-  --central: #E32017;
-  --circle: #FFD300;
-  --district: #00782A;
-  --hammersmith: #F3A9BB;
-  --jubilee: #A0A5A9;
-  --metropolitan: #9B0056;
-  --northern: #000000;
-  --piccadilly: #003688;
-  --victoria: #0098D4;
-  --waterloo: #95CDBA;
-  --overground: #EE7C0E;
-  --dlr: #00A4A7;
-  --elizabeth: #9364CD;
-  --tram: #84B817;
-  --cablecar: #E21836;
 }
 
 /* Global styles */
@@ -274,23 +258,6 @@ nav ul li a:hover {
   width: 30px;
   display: inline-block;
 }
-
-.color-line.bakerloo { background-color: var(--bakerloo); }
-.color-line.central { background-color: var(--central); }
-.color-line.circle { background-color: var(--circle); }
-.color-line.district { background-color: var(--district); }
-.color-line.hammersmith { background-color: var(--hammersmith); }
-.color-line.jubilee { background-color: var(--jubilee); }
-.color-line.metropolitan { background-color: var(--metropolitan); }
-.color-line.northern { background-color: var(--northern); }
-.color-line.piccadilly { background-color: var(--piccadilly); }
-.color-line.victoria { background-color: var(--victoria); }
-.color-line.waterloo { background-color: var(--waterloo); }
-.color-line.overground { background-color: var(--overground); }
-.color-line.dlr { background-color: var(--dlr); }
-.color-line.elizabeth { background-color: var(--elizabeth); }
-.color-line.tram { background-color: var(--tram); }
-.color-line.cablecar { background-color: var(--cablecar); }
 
 /* Map symbols for the key */
 .map-symbol {

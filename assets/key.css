@@ -103,23 +103,6 @@
   border-radius: 3px;
 }
 
-.bakerloo { background-color: #B36305; }
-.central { background-color: #E32017; }
-.circle { background-color: #FFD300; }
-.district { background-color: #00782A; }
-.hammersmith { background-color: #F3A9BB; }
-.jubilee { background-color: #A0A5A9; }
-.metropolitan { background-color: #9B0056; }
-.northern { background-color: #000000; }
-.piccadilly { background-color: #003688; }
-.victoria { background-color: #0098D4; }
-.waterloo { background-color: #95CDBA; }
-.overground { background-color: #EE7C0E; }
-.dlr { background-color: #00A4A7; }
-.elizabeth { background-color: #6950A1; }
-.tram { background-color: #84B817; }
-.cablecar { background-color: #E21836; }
-
 .map-symbol {
   display: inline-block;
   width: 20px;
