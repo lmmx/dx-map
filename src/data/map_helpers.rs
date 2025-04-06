@@ -1,4 +1,5 @@
 use super::model::{Platform, Station};
+use crate::utils::geojson::{Feature, FeatureCollection, Geometry, GeoJsonSource, to_js_value};
 use crate::data::TflDataRepository;
 use crate::utils::log::{self, LogCategory};
 use js_sys::{Array, Object, Reflect};
@@ -6,41 +7,41 @@ use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::{JsError, JsValue};
 
-/// GeoJSON source specification
-#[derive(Debug, Serialize)]
-pub struct GeoJsonSourceSpec {
-    pub r#type: String,
-    pub data: FeatureCollection,
-}
-
-/// GeoJSON FeatureCollection
-#[derive(Debug, Serialize)]
-pub struct FeatureCollection {
-    pub r#type: String,
-    pub features: Vec<Feature>,
-}
-
-/// GeoJSON Feature
-#[derive(Debug, Serialize)]
-pub struct Feature {
-    pub r#type: String,
-    pub geometry: FeatureGeometry,
-    pub properties: FeatureProperties,
-}
-
-/// GeoJSON Geometry
-#[derive(Debug, Serialize)]
-pub struct FeatureGeometry {
-    pub r#type: String,
-    pub coordinates: Vec<[f64; 2]>,
-}
-
-/// GeoJSON Properties
-#[derive(Debug, Serialize)]
-pub struct FeatureProperties {
-    pub line_id: String,
-    pub segment_id: usize,
-}
+// /// GeoJSON source specification
+// #[derive(Debug, Serialize)]
+// pub struct GeoJsonSourceSpec {
+//     pub r#type: String,
+//     pub data: FeatureCollection,
+// }
+// 
+// /// GeoJSON FeatureCollection
+// #[derive(Debug, Serialize)]
+// pub struct FeatureCollection {
+//     pub r#type: String,
+//     pub features: Vec<Feature>,
+// }
+// 
+// /// GeoJSON Feature
+// #[derive(Debug, Serialize)]
+// pub struct Feature {
+//     pub r#type: String,
+//     pub geometry: FeatureGeometry,
+//     pub properties: FeatureProperties,
+// }
+// 
+// /// GeoJSON Geometry
+// #[derive(Debug, Serialize)]
+// pub struct FeatureGeometry {
+//     pub r#type: String,
+//     pub coordinates: Vec<[f64; 2]>,
+// }
+// 
+// /// GeoJSON Properties
+// #[derive(Debug, Serialize)]
+// pub struct FeatureProperties {
+//     pub line_id: String,
+//     pub segment_id: usize,
+// }
 
 /// Convert a list of stations into a format suitable for MapLibre GeoJSON
 pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
@@ -351,42 +352,33 @@ pub fn route_geometries_to_geojson(
             continue;
         }
 
+        let properties = serde_json::json!({
+            "line_id": line_id,
+            "segment_id": i,
+        });
+
         // Create a GeoJSON LineString feature
         let feature = Feature {
-            r#type: "Feature".to_string(),
-            geometry: FeatureGeometry {
-                r#type: "LineString".to_string(),
+            feature_type: "Feature".to_string(),
+            geometry: Geometry::LineString {
                 coordinates: coordinates.clone(),
             },
-            properties: FeatureProperties {
-                line_id: line_id.to_string(),
-                segment_id: i,
-            },
+            properties,
         };
 
         features.push(feature);
     }
 
     // Create the GeoJSON source using our structs
-    let geo_json_source = GeoJsonSourceSpec {
-        r#type: "geojson".to_string(),
+    let geo_json_source = GeoJsonSource {
+        source_type: "geojson".to_string(),
         data: FeatureCollection {
-            r#type: "FeatureCollection".to_string(),
+            collection_type: "FeatureCollection".to_string(),
             features,
         },
     };
 
-    // Configure the serializer to serialize maps as objects
-    let ser = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
-
-    // Convert to JsValue
-    match geo_json_source.serialize(&ser) {
-        Ok(js_value) => Ok(js_value),
-        Err(err) => Err(JsError::new(&format!(
-            "Failed to serialize GeoJSON: {:?}",
-            err
-        ))),
-    }
+    to_js_value(&geo_json_source)
 }
 
 /// Generate all route geometries as GeoJSON for multiple lines
