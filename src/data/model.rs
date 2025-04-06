@@ -148,9 +148,9 @@ pub struct RouteSequence {
     /// GeoJSON LineString representation of the route
     #[serde(rename = "LineStrings")]
     pub line_strings: Vec<String>,
-    /// Stations along this route
-    #[serde(rename = "Stations")]
-    pub stations: Vec<MatchedStop>,
+    // /// Stations along this route
+    // #[serde(rename = "Stations")]
+    // pub stations: Vec<MatchedStop>,
     /// Detailed stop point sequences
     #[serde(rename = "StopPointSequences")]
     #[serde(default)]

@@ -3,7 +3,7 @@
   for direction in inbound outbound
   do
     # Loop over each JSON file in that direction
-    for f in routes/"$direction"/*.json
+    for f in routes/"$direction"/*.json routes/"$direction"/bus/*.json
     do
       # Extract just the “bakerloo”, “central” etc. from the filename
       line="$(basename "$f" .json)"
@@ -16,6 +16,6 @@
     reduce .[] as $obj (
       {};
       # For each object, put the data under obj.line → obj.direction
-      .[$obj.line][$obj.direction] = $obj.data
+      .[$obj.line][$obj.direction] = ($obj.data | del(.results[].Stations))
     )
 ' > routes.json
