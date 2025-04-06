@@ -84,12 +84,12 @@ pub const LINE_INFOS: &[LineInfo] = &[
         color: "#95CDBA",
         line_type: LineType::Underground,
     },
-    LineInfo {
-        id: "london-overground",
-        name: "Overground",
-        color: "#EE7C0E",
-        line_type: LineType::Overground,
-    },
+    // LineInfo {
+    //     id: "london-overground",
+    //     name: "Overground",
+    //     color: "#EE7C0E",
+    //     line_type: LineType::Overground,
+    // },
     LineInfo {
         id: "dlr",
         name: "DLR",
@@ -175,10 +175,20 @@ pub fn get_underground_lines() -> Vec<&'static LineInfo> {
         .collect()
 }
 
+pub fn get_overground_lines() -> Vec<&'static LineInfo> {
+    LINE_INFOS
+        .iter()
+        .filter(|info| matches!(info.line_type, LineType::Overground))
+        .collect()
+}
+
 pub fn get_other_rail_lines() -> Vec<&'static LineInfo> {
     LINE_INFOS
         .iter()
-        .filter(|info| !matches!(info.line_type, LineType::Underground))
+        .filter(|info| {
+            // "Other rail" means neither Underground nor Overground
+            !matches!(info.line_type, LineType::Underground | LineType::Overground)
+        })
         .collect()
 }
 
