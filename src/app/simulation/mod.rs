@@ -158,17 +158,8 @@ fn register_vehicle_layers() {
 
                     // Check if source already exists by checking if layer exists
                     if map.get_layer("buses-layer").is_none() {
-                        // Create an empty GeoJSON FeatureCollection
-                        let empty_collection = FeatureCollection {
-                            collection_type: "FeatureCollection",
-                            features: Vec::new(),
-                        };
-
-                        // Create the GeoJSON source
-                        let geojson_source = GeoJsonSource {
-                            source_type: "geojson",
-                            data: empty_collection,
-                        };
+                        // Create an empty source using our utility function
+                        let geojson_source = new_geojson_source(Vec::new());
 
                         // Serialize to JsValue
                         match to_js_value(&geojson_source) {
