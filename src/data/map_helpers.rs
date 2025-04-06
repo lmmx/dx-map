@@ -8,30 +8,13 @@ use std::collections::HashMap;
 use wasm_bindgen::{JsError, JsValue};
 
 /// Convert a list of stations into a format suitable for MapLibre GeoJSON
-pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
+pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsError> {
     log::info_with_category(
         LogCategory::Map,
         &format!("Converting {} stations to GeoJSON", stations.len()),
     );
 
-    // Create the GeoJSON structure
-    let geojson = Object::new();
-    Reflect::set(
-        &geojson,
-        &JsValue::from_str("type"),
-        &JsValue::from_str("geojson"),
-    )?;
-
-    // Create the FeatureCollection object inner
-    let data = Object::new();
-    Reflect::set(
-        &data,
-        &JsValue::from_str("type"),
-        &JsValue::from_str("FeatureCollection"),
-    )?;
-
-    // Create the features array
-    let features = Array::new();
+    let mut features = Vec::new();
 
     for station in stations {
         // Skip stations with invalid coordinates
@@ -39,69 +22,45 @@ pub fn stations_to_geojson(stations: &[Station]) -> Result<JsValue, JsValue> {
             continue;
         }
 
+        // Create properties as a JSON object
+        let properties = serde_json::json!({
+            "id": station.station_unique_id,
+            "name": station.station_name,
+            "fareZones": station.fare_zones,
+            "wifi": station.wifi,
+        });
+
         // Create a feature for this station
-        let feature = Object::new();
-        Reflect::set(
-            &feature,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("Feature"),
-        )?;
+        let feature = Feature {
+            feature_type: "Feature".to_string(),
+            geometry: Geometry::Point {
+                coordinates: [station.lon, station.lat], // Note: GeoJSON is [lng, lat]
+            },
+            properties,
+        };
 
-        // Set the geometry
-        let geometry = Object::new();
-        Reflect::set(
-            &geometry,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("Point"),
-        )?;
-
-        let coordinates = Array::new();
-        coordinates.push(&JsValue::from_f64(station.lon)); // Note: GeoJSON is [lng, lat]
-        coordinates.push(&JsValue::from_f64(station.lat));
-
-        Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coordinates)?;
-
-        Reflect::set(&feature, &JsValue::from_str("geometry"), &geometry)?;
-
-        // Set the properties
-        let properties = Object::new();
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("id"),
-            &JsValue::from_str(&station.station_unique_id),
-        )?;
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("name"),
-            &JsValue::from_str(&station.station_name),
-        )?;
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("fareZones"),
-            &JsValue::from_str(&station.fare_zones),
-        )?;
-        Reflect::set(
-            &properties,
-            &JsValue::from_str("wifi"),
-            &JsValue::from_bool(station.wifi),
-        )?;
-
-        Reflect::set(&feature, &JsValue::from_str("properties"), &properties)?;
-
-        // Add this feature to the features array
-        features.push(&feature);
+        features.push(feature);
     }
 
-    // Set the features array on the GeoJSON object
-    Reflect::set(&data, &JsValue::from_str("features"), &features)?;
-    Reflect::set(&geojson, &JsValue::from_str("data"), &data)?;
+    // Store the length before moving the vector
+    let feature_count = features.len();
+
+    // Create the GeoJSON source
+    let geojson_source = GeoJsonSource {
+        source_type: "geojson".to_string(),
+        data: FeatureCollection {
+            collection_type: "FeatureCollection".to_string(),
+            features,
+        },
+    };
 
     log::debug_with_category(
         LogCategory::Map,
-        &format!("Created GeoJSON with {} features", features.length()),
+        &format!("Created GeoJSON with {} features", feature_count),
     );
 
-    Ok(geojson.into())
+    // Convert to JsValue
+    to_js_value(&geojson_source)
 }
 
 /// Create a mapping of line names to their corresponding stations
