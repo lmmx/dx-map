@@ -1,6 +1,10 @@
 use crate::maplibre::bindings::*;
+use crate::utils::geojson::{
+    new_geojson_source, new_linestring_feature, new_point_feature, to_js_value,
+};
 use crate::utils::log::{LogCategory, with_context};
 use js_sys::{Array, Object, Reflect};
+use serde::Serialize;
 use std::collections::HashMap;
 use wasm_bindgen::prelude::*;
 use web_sys::window;
@@ -317,50 +321,6 @@ pub fn add_inline_script(content: &str) -> Result<(), JsValue> {
 
 // Helper functions for creating map elements
 
-pub fn create_geojson_line_source(coordinates: &[(f64, f64)]) -> Result<JsValue, JsValue> {
-    with_context("create_geojson_line_source", LogCategory::Map, |logger| {
-        logger.debug(&format!(
-            "Creating GeoJSON line source with {} points",
-            coordinates.len()
-        ));
-        let source = Object::new();
-        Reflect::set(
-            &source,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("geojson"),
-        )?;
-
-        let data = Object::new();
-        Reflect::set(
-            &data,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("Feature"),
-        )?;
-        Reflect::set(&data, &JsValue::from_str("properties"), &Object::new())?;
-
-        let geometry = Object::new();
-        Reflect::set(
-            &geometry,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("LineString"),
-        )?;
-
-        let coords = Array::new();
-        for &(lng, lat) in coordinates {
-            let point = Array::new();
-            point.push(&JsValue::from_f64(lng));
-            point.push(&JsValue::from_f64(lat));
-            coords.push(&point);
-        }
-
-        Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coords)?;
-        Reflect::set(&data, &JsValue::from_str("geometry"), &geometry)?;
-        Reflect::set(&source, &JsValue::from_str("data"), &data)?;
-
-        Ok(source.into())
-    })
-}
-
 pub fn create_line_layer(
     id: &str,
     source: &str,
@@ -415,68 +375,6 @@ pub fn create_line_layer(
     })
 }
 
-pub fn create_geojson_points_source(
-    points: &[HashMap<String, JsValue>],
-) -> Result<JsValue, JsValue> {
-    with_context("create_geojson_points_source", LogCategory::Map, |logger| {
-        logger.debug(&format!(
-            "Creating points source with {} points",
-            points.len()
-        ));
-        let source = Object::new();
-        Reflect::set(
-            &source,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("geojson"),
-        )?;
-
-        let data = Object::new();
-        Reflect::set(
-            &data,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("FeatureCollection"),
-        )?;
-
-        let features = Array::new();
-        for point in points {
-            let feature = Object::new();
-            Reflect::set(
-                &feature,
-                &JsValue::from_str("type"),
-                &JsValue::from_str("Feature"),
-            )?;
-
-            let properties = Object::new();
-            if let Some(name) = point.get("name") {
-                Reflect::set(&properties, &JsValue::from_str("name"), name)?;
-            }
-            Reflect::set(&feature, &JsValue::from_str("properties"), &properties)?;
-
-            let geometry = Object::new();
-            Reflect::set(
-                &geometry,
-                &JsValue::from_str("type"),
-                &JsValue::from_str("Point"),
-            )?;
-
-            if let (Some(lng), Some(lat)) = (point.get("lng"), point.get("lat")) {
-                let coords = Array::new();
-                coords.push(lng);
-                coords.push(lat);
-                Reflect::set(&geometry, &JsValue::from_str("coordinates"), &coords)?;
-            }
-
-            Reflect::set(&feature, &JsValue::from_str("geometry"), &geometry)?;
-            features.push(&feature);
-        }
-
-        Reflect::set(&data, &JsValue::from_str("features"), &features)?;
-        Reflect::set(&source, &JsValue::from_str("data"), &data)?;
-
-        Ok(source.into())
-    })
-}
-
 /// Helper to create circle layer for stations
 pub fn create_circle_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
     with_context("create_circle_layer", LogCategory::Map, |logger| {
@@ -484,43 +382,32 @@ pub fn create_circle_layer(id: &str, source: &str) -> Result<JsValue, JsValue> {
             "Creating circle layer '{}' with source '{}'",
             id, source
         ));
-        let layer = Object::new();
-        Reflect::set(&layer, &JsValue::from_str("id"), &JsValue::from_str(id))?;
-        Reflect::set(
-            &layer,
-            &JsValue::from_str("type"),
-            &JsValue::from_str("circle"),
-        )?;
-        Reflect::set(
-            &layer,
-            &JsValue::from_str("source"),
-            &JsValue::from_str(source),
-        )?;
 
-        let paint = Object::new();
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-radius"),
-            &JsValue::from_f64(6.0),
-        )?;
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-color"),
-            &JsValue::from_str("#ffffff"),
-        )?;
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-stroke-color"),
-            &JsValue::from_str("#000000"),
-        )?;
-        Reflect::set(
-            &paint,
-            &JsValue::from_str("circle-stroke-width"),
-            &JsValue::from_f64(2.0),
-        )?;
-        Reflect::set(&layer, &JsValue::from_str("paint"), &paint)?;
+        // Create the layer configuration with JSON
+        let layer_config = serde_json::json!({
+            "id": id,
+            "type": "circle",
+            "source": source,
+            "paint": {
+                "circle-radius": 6.0,
+                "circle-color": "#ffffff",
+                "circle-stroke-color": "#000000",
+                "circle-stroke-width": 2.0
+            }
+        });
 
-        Ok(layer.into())
+        // Serialize to JsValue
+        let serializer = serde_wasm_bindgen::Serializer::new().serialize_maps_as_objects(true);
+        match layer_config.serialize(&serializer) {
+            Ok(js_value) => Ok(js_value),
+            Err(err) => {
+                logger.error(&format!("Failed to serialize circle layer: {:?}", err));
+                Err(JsValue::from_str(&format!(
+                    "Serialization error: {:?}",
+                    err
+                )))
+            }
+        }
     })
 }
 
