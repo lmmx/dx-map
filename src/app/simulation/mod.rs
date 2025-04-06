@@ -452,24 +452,12 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
             });
 
             // Create a point feature
-            Feature {
-                feature_type: "Feature",
-                geometry: Geometry::Point {
-                    coordinates: [vehicle.lng, vehicle.lat],
-                },
-                properties,
-            }
+            new_point_feature(vehicle.lng, vehicle.lat, properties)
         })
         .collect();
 
     // Create the GeoJSON source
-    let geojson_source = GeoJsonSource {
-        source_type: "geojson",
-        data: FeatureCollection {
-            collection_type: "FeatureCollection",
-            features,
-        },
-    };
+    let geojson_source = new_geojson_source(features);
 
     // Try to get the map instance and update the source
     if let Some(window) = window() {
@@ -483,7 +471,7 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
             .unwrap_or(false);
 
             if has_source {
-                // Serialize to JsValue
+                // Serialize to JsValue - use .data to get just the FeatureCollection
                 match to_js_value(&geojson_source.data) {
                     Ok(data) => {
                         // Update the source data
