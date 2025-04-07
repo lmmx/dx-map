@@ -1,5 +1,6 @@
 use crate::app::simulation::model::build_routes_from_tfl_data;
 use crate::data::TflDataRepository;
+use crate::data::line_definitions::get_line_color;
 use crate::utils::geojson::{new_geojson_source, new_point_feature, to_js_value};
 use crate::utils::log::{self, LogCategory, with_context};
 use js_sys::{Object, Reflect};
@@ -166,13 +167,11 @@ fn register_vehicle_layers() {
                                 map.add_source("vehicles-source", &source_js);
 
                                 // Create and add bus layer
-                                let bus_layer =
-                                    create_vehicle_layer("buses-layer", "Bus", "#0000FF");
+                                let bus_layer = create_vehicle_layer("buses-layer", "Bus");
                                 map.add_layer(&bus_layer);
 
                                 // Create and add train layer
-                                let train_layer =
-                                    create_vehicle_layer("trains-layer", "Train", "#FF0000");
+                                let train_layer = create_vehicle_layer("trains-layer", "Train");
                                 map.add_layer(&train_layer);
 
                                 logger.info("Vehicle layers successfully added");
@@ -196,7 +195,7 @@ fn register_vehicle_layers() {
 }
 
 /// Helper function to create a vehicle layer specification
-fn create_vehicle_layer(id: &str, vehicle_type: &str, color: &str) -> JsValue {
+fn create_vehicle_layer(id: &str, vehicle_type: &str) -> JsValue {
     let layer = Object::new();
 
     // Set basic properties
@@ -236,12 +235,12 @@ fn create_vehicle_layer(id: &str, vehicle_type: &str, color: &str) -> JsValue {
         &JsValue::from_f64(6.0),
     )
     .unwrap();
-    Reflect::set(
-        &paint,
-        &JsValue::from_str("circle-color"),
-        &JsValue::from_str(color),
-    )
-    .unwrap();
+    // Use the color property directly
+    let color_expr = js_sys::Array::new();
+    color_expr.push(&JsValue::from_str("get"));
+    color_expr.push(&JsValue::from_str("lineColor"));
+
+    Reflect::set(&paint, &JsValue::from_str("circle-color"), &color_expr).unwrap();
     Reflect::set(
         &paint,
         &JsValue::from_str("circle-stroke-color"),
@@ -483,10 +482,21 @@ fn update_maplibre_vehicles(sim_state: &SimulationState) {
                 VehicleType::Train => "Train",
             };
 
+            // Determine color based on vehicle type
+            let color = match vehicle.vehicle_type {
+                VehicleType::Bus => "#0000FF".to_string(), // Blue for buses
+                VehicleType::Train => {
+                    // For trains, get color from the line_id
+                    get_line_color(&vehicle.line_id)
+                }
+            };
+
             // Create properties for this vehicle
             let properties = serde_json::json!({
                 "id": vehicle.id,
-                "vehicleType": vehicle_type
+                "vehicleType": vehicle_type,
+                "lineId": vehicle.line_id,
+                "lineColor": color
             });
 
             // Create a point feature

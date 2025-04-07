@@ -13,6 +13,7 @@ pub struct Vehicle {
     pub id: usize,
     pub vehicle_type: VehicleType,
     pub route_index: usize,
+    pub line_id: String,
     pub position: f64,       // 0.0 to 1.0 position along route segment
     pub speed: f64,          // Movement speed
     pub direction: i8,       // 1 = forward, -1 = backward
@@ -26,6 +27,7 @@ pub struct Vehicle {
 pub struct Route {
     pub id: usize,
     pub name: String,
+    pub line_id: String,
     pub vehicle_type: VehicleType,
     pub stations: Vec<(f64, f64)>, // Vec of (lng, lat) coordinates
 }
@@ -38,7 +40,8 @@ pub fn build_sample_routes() -> Vec<Route> {
     // Central Line (simplified)
     routes.push(Route {
         id: 0,
-        name: "Central Line".to_string(),
+        name: "central (segment 0)".to_string(),
+        line_id: "central".to_string(),
         vehicle_type: VehicleType::Train,
         stations: vec![
             // West to East: Longitude, Latitude
@@ -72,7 +75,8 @@ pub fn build_sample_routes() -> Vec<Route> {
     // Northern Line (simplified)
     routes.push(Route {
         id: 1,
-        name: "Northern Line".to_string(),
+        name: "northern (segment 0)".to_string(),
+        line_id: "northern".to_string(),
         vehicle_type: VehicleType::Train,
         stations: vec![
             // North to South
@@ -103,7 +107,8 @@ pub fn build_sample_routes() -> Vec<Route> {
     // Bus route (sample)
     routes.push(Route {
         id: 2,
-        name: "Bus 88".to_string(),
+        name: "88 (segment 0)".to_string(),
+        line_id: "88".to_string(),
         vehicle_type: VehicleType::Bus,
         stations: vec![
             // West to East (Camden to Canning Town)
@@ -180,6 +185,7 @@ pub fn build_routes_from_tfl_data(tfl_data: &TflDataRepository) -> Vec<Route> {
             routes.push(Route {
                 id: route_id,
                 name: format!("{} (segment {})", line_id, segment_idx),
+                line_id: line_id.clone(),
                 vehicle_type: vehicle_type.clone(),
                 stations,
             });
@@ -230,6 +236,7 @@ pub fn initialize_vehicles(routes: &[Route]) -> Vec<Vehicle> {
                 id: id_counter,
                 vehicle_type: route.vehicle_type.clone(),
                 route_index: route.id,
+                line_id: route.line_id.clone(),
                 position: Math::random(), // Random position along segment
                 speed: 0.005 + Math::random() * 0.05, // Random speed
                 direction,
