@@ -72,12 +72,61 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
 
         // Background group
         {
-            let labels_layer = Layer::new("labels", "Map Labels", "place-", true);
-            let background_layers = Array::new();
-            background_layers.push(&labels_layer);
+            // Label layer IDs - `window.mapInstance.getStyle().layers.slice(110, 119).map(layer => layer.id);`
+            let label_ids = vec![
+                "label_other",
+                "label_village",
+                "label_town",
+                "label_state",
+                "label_city",
+                "label_city_capital",
+                "label_country_3",
+                "label_country_2",
+                "label_country_1",
+            ];
 
-            let background_group = LayerGroup::new("Background", &background_layers);
-            layer_groups.push(&background_group);
+            // Create layers for each label ID and add to background_layers
+            let label_layers = label_ids
+                .iter()
+                .map(|id| {
+                    Layer::new(
+                        &format!("labels-{}", &id[6..].replace('_', "-")), // "labels-other", ...
+                        &format!("Map Label: {}", &id[6..].replace('_', " ")), // "Map Label: other", ...
+                        id, // "label_other" - this is the name of the layer
+                        false,
+                    )
+                })
+                .collect::<Array>();
+
+            let label_group = LayerGroup::new("Labels", &label_layers);
+            layer_groups.push(&label_group);
+        }
+
+        // Label group
+        {
+            // Label layer IDs - `window.mapInstance.getStyle().layers.slice(110, 119).map(layer => layer.id);`
+            let highway_ids = vec![
+                "highway-name-path",
+                "highway-name-minor",
+                "highway-name-major",
+                "highway-shield-non-us",
+            ];
+
+            // Create layers for each highway ID and add to highway_layers
+            let highway_layers = highway_ids
+                .iter()
+                .map(|id| {
+                    Layer::new(
+                        &format!("highways-{}", &id[8..]), // "highways-name-path", ...
+                        &format!("Highway: {}", &id[8..].replace('_', " ")), // "Highway: name path", ...
+                        id, // "highway-name-path" - this is the name of the layer
+                        false,
+                    )
+                })
+                .collect::<Array>();
+
+            let highway_group = LayerGroup::new("Highways", &highway_layers);
+            layer_groups.push(&highway_group);
         }
 
         // Transport group
@@ -150,7 +199,7 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
                 true,
             ));
             transport_layers.push(&Layer::new(
-                "tube-elizabeth",
+                "elizabeth",
                 "Elizabeth Line",
                 "elizabeth-route-layer",
                 true,
@@ -195,7 +244,7 @@ pub fn create_layer_groups() -> Result<JsValue, JsValue> {
             transport_layers.push(&Layer::new(
                 "cable-car",
                 "Cable Car",
-                "cable-car-route-layer",
+                "london-cable-car-route-layer",
                 true,
             ));
             transport_layers.push(&Layer::new("dlr", "DLR", "dlr-route-layer", true));

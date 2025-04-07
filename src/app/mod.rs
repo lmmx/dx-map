@@ -46,13 +46,17 @@ pub struct TflLayers {
     pub dlr: bool,
     /// Elizabeth Line (Crossrail)
     pub elizabeth_line: bool,
+    /// Thameslink
+    pub thameslink: bool,
     /// Bus routes
     pub buses: bool,
     /// Tram services
     pub trams: bool,
     /// Emirates Air Line cable car
     pub cable_car: bool,
-    /// Station markers
+    /// Place labels
+    pub labels: bool,
+    /// Station markers and labels
     pub stations: bool,
     /// Depot locations
     pub depots: bool,
@@ -67,9 +71,11 @@ impl Default for TflLayers {
             overground: true,
             dlr: true,
             elizabeth_line: true,
+            thameslink: true,
             buses: false,
             trams: true,
             cable_car: true,
+            labels: false,
             stations: true,
             depots: false,
             simulation: false, // Simulation disabled by default
