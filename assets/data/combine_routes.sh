@@ -16,7 +16,7 @@
     reduce .[] as $obj (
       {};
       # For each object, put the data under obj.line → obj.direction
-      .[$obj.line][$obj.direction] = ($obj.data | del(.results[].Stations))
+      .[$obj.line][$obj.direction] = ($obj.data | del(.results[] ["Stations", "LineName", "IsOutboundOnly", "StopPointSequences", "OrderedLineRoutes"]))
     )
 ' > rail_routes.json
 
@@ -38,6 +38,6 @@
     reduce .[] as $obj (
       {};
       # For each object, put the data under obj.line → obj.direction
-      .[$obj.line][$obj.direction] = ($obj.data | del(.results[].Stations))
+      .[$obj.line][$obj.direction] = ($obj.data | del(.results[] ["Stations", "LineName", "IsOutboundOnly", "StopPointSequences", "OrderedLineRoutes"]))
     )
 ' > bus_routes.json
