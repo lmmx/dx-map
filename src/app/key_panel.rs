@@ -89,14 +89,6 @@ pub fn KeyPanel(visible: bool, on_close: EventHandler<()>) -> Element {
                             }
                         }
                     }
-                    tr {
-                        td { "Depot" }
-                        td {
-                            div {
-                                class: "map-symbol depot"
-                            }
-                        }
-                    }
                 }
             }
         }

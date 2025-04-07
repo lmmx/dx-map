@@ -1,5 +1,25 @@
 use super::TflLayers;
 use dioxus::prelude::*;
+use web_sys::window;
+
+// Add this helper function in src/app/layer_panel.rs or at the module level in src/app/mod.rs
+fn update_js_layer_visibility(layer_id: &str, visible: bool) {
+    if let Some(window) = window() {
+        let js_code = format!(
+            r#"
+            if (window.LayerSwitcher && window.LayerSwitcher.getInstance()) {{
+                const layerSwitcher = window.LayerSwitcher.getInstance();
+                if (layerSwitcher) {{
+                    layerSwitcher.setVisibility("{0}", {1});
+                }}
+            }}
+            "#,
+            layer_id, visible
+        );
+
+        let _ = js_sys::eval(&js_code);
+    }
+}
 
 #[component]
 pub fn LayerPanel(
@@ -14,33 +34,6 @@ pub fn LayerPanel(
 
             h3 { "Layers" }
 
-            h4 { "Background" }
-            div {
-                class: "layer-item",
-                input {
-                    r#type: "checkbox",
-                    id: "nighttime_lights",
-                    name: "nighttime_lights"
-                }
-                label {
-                    r#for: "nighttime_lights",
-                    "Nighttime Lights"
-                }
-            }
-            div {
-                class: "layer-item",
-                input {
-                    r#type: "checkbox",
-                    id: "labels",
-                    name: "labels",
-                    checked: true,
-                }
-                label {
-                    r#for: "labels",
-                    "Labels"
-                }
-            }
-
             h4 { "Transport" }
 
             div {
@@ -54,6 +47,19 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.tube = !updated.tube;
                         layers.set(updated);
+
+                        // Update JavaScript layer visibility for all tube lines
+                        update_js_layer_visibility("tube-central", updated.tube);
+                        update_js_layer_visibility("tube-northern", updated.tube);
+                        update_js_layer_visibility("tube-victoria", updated.tube);
+                        update_js_layer_visibility("tube-district", updated.tube);
+                        update_js_layer_visibility("tube-bakerloo", updated.tube);
+                        update_js_layer_visibility("tube-hammersmith-city", updated.tube);
+                        update_js_layer_visibility("tube-piccadilly", updated.tube);
+                        update_js_layer_visibility("tube-jubilee", updated.tube);
+                        update_js_layer_visibility("tube-metropolitan", updated.tube);
+                        update_js_layer_visibility("tube-circle", updated.tube);
+                        update_js_layer_visibility("tube-waterloo-city", updated.tube);
                     }
                 }
                 label {
@@ -73,6 +79,14 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.overground = !updated.overground;
                         layers.set(updated);
+
+                        // Update JavaScript layer visibility for all tube lines
+                        update_js_layer_visibility("overground-liberty", updated.overground);
+                        update_js_layer_visibility("overground-lioness", updated.overground);
+                        update_js_layer_visibility("overground-mildmay", updated.overground);
+                        update_js_layer_visibility("overground-suffragette", updated.overground);
+                        update_js_layer_visibility("overground-weaver", updated.overground);
+                        update_js_layer_visibility("overground-windrush", updated.overground);
                     }
                 }
                 label {
@@ -92,6 +106,8 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.dlr = !updated.dlr;
                         layers.set(updated);
+
+                        update_js_layer_visibility("dlr", updated.dlr);
                     }
                 }
                 label {
@@ -111,11 +127,34 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.elizabeth_line = !updated.elizabeth_line;
                         layers.set(updated);
+
+                        update_js_layer_visibility("elizabeth", updated.elizabeth_line);
                     }
                 }
                 label {
                     r#for: "elizabeth_line",
                     "Elizabeth Line"
+                }
+            }
+
+            div {
+                class: "layer-item",
+                input {
+                    r#type: "checkbox",
+                    id: "thameslink",
+                    name: "thameslink",
+                    checked: layers.read().thameslink,
+                    onchange: move |_| {
+                        let mut updated = *layers.read();
+                        updated.thameslink = !updated.thameslink;
+                        layers.set(updated);
+
+                        update_js_layer_visibility("thameslink", updated.thameslink);
+                    }
+                }
+                label {
+                    r#for: "thameslink",
+                    "Thameslink"
                 }
             }
 
@@ -130,6 +169,8 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.buses = !updated.buses;
                         layers.set(updated);
+
+                        update_js_layer_visibility("bus", updated.buses);
                     }
                 }
                 label {
@@ -149,6 +190,8 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.trams = !updated.trams;
                         layers.set(updated);
+
+                        update_js_layer_visibility("tram", updated.trams);
                     }
                 }
                 label {
@@ -168,6 +211,8 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.cable_car = !updated.cable_car;
                         layers.set(updated);
+
+                        update_js_layer_visibility("cable-car", updated.cable_car);
                     }
                 }
                 label {
@@ -207,6 +252,9 @@ pub fn LayerPanel(
                         let mut updated = *layers.read();
                         updated.stations = !updated.stations;
                         layers.set(updated);
+
+                        update_js_layer_visibility("stations", updated.stations);
+                        update_js_layer_visibility("station-labels", updated.stations);
                     }
                 }
                 label {
@@ -215,22 +263,50 @@ pub fn LayerPanel(
                 }
             }
 
+            h4 { "Background" }
             div {
                 class: "layer-item",
                 input {
                     r#type: "checkbox",
-                    id: "depots",
-                    name: "depots",
-                    checked: layers.read().depots,
+                    id: "nighttime_lights",
+                    name: "nighttime_lights"
+                }
+                label {
+                    r#for: "nighttime_lights",
+                    "Nighttime Lights"
+                }
+            }
+            div {
+                class: "layer-item",
+                input {
+                    r#type: "checkbox",
+                    id: "labels",
+                    name: "labels",
+                    checked: false,
                     onchange: move |_| {
                         let mut updated = *layers.read();
-                        updated.depots = !updated.depots;
+                        updated.labels = !updated.labels;
                         layers.set(updated);
+
+                        // Update JavaScript layer visibility for all tube lines
+                        update_js_layer_visibility("labels-other", updated.labels);
+                        update_js_layer_visibility("labels-village", updated.labels);
+                        update_js_layer_visibility("labels-town", updated.labels);
+                        update_js_layer_visibility("labels-state", updated.labels);
+                        update_js_layer_visibility("labels-city", updated.labels);
+                        update_js_layer_visibility("labels-city_capital", updated.labels);
+                        update_js_layer_visibility("labels-country_3", updated.labels);
+                        update_js_layer_visibility("labels-country_2", updated.labels);
+                        update_js_layer_visibility("labels-country_1", updated.labels);
+                        update_js_layer_visibility("highway-name-path", updated.labels);
+                        update_js_layer_visibility("highway-name-minor", updated.labels);
+                        update_js_layer_visibility("highway-name-major", updated.labels);
+                        update_js_layer_visibility("highway-shield-non-us", updated.labels);
                     }
                 }
                 label {
-                    r#for: "depots",
-                    "Depots & Facilities"
+                    r#for: "labels",
+                    "Labels"
                 }
             }
 

@@ -20,19 +20,6 @@ class LayerSwitcher {
       .filter(layer => layer.enabled)
       .map(layer => layer.id);
 
-    // Create DOM elements
-    this._layerList = document.createElement('ul');
-    this._container = document.createElement('div');
-    this._container.className = 'layer-switcher-list';
-
-    const titleElement = document.createElement('h3');
-    titleElement.textContent = title;
-
-    this._container.appendChild(titleElement);
-    this._container.appendChild(this._layerList);
-
-    // Append to document body for positioning
-    document.body.appendChild(this._container);
     // Store instance for retrieval
     LayerSwitcher._instance = this;
   }
@@ -66,7 +53,6 @@ class LayerSwitcher {
     }
 
     this._updateVisibility();
-    this._updateList();
   }
 
   // Update visibility of all layers in the map
@@ -102,7 +88,6 @@ class LayerSwitcher {
         }
       }
     }
-    this._updateList();
   }
 
   // MapLibre IControl implementation
@@ -125,17 +110,13 @@ class LayerSwitcher {
     button.className = 'layer-switcher-button';
     button.setAttribute('aria-label', 'Layer Switcher');
 
-    // Set up event listeners
+    // Set up event listeners - MODIFIED TO CALL RUST FUNCTION
     button.addEventListener('click', () => {
-      this._container.classList.toggle('active');
-      this._updateList();
-    });
-
-    // Hide the panel when clicking outside
-    document.addEventListener('click', (e) => {
-      if (!this._container.contains(e.target) &&
-          !e.target.classList.contains('layer-switcher-button')) {
-        this._container.classList.remove('active');
+      // Call the Rust function instead of toggling visibility ourselves
+      if (window.openTflLayerPanel) {
+        window.openTflLayerPanel();
+      } else {
+        console.log("Layer button click failed: no openTflLayerPanel exposed to JS on the window");
       }
     });
 
@@ -144,73 +125,11 @@ class LayerSwitcher {
     controlContainer.className = 'maplibregl-ctrl maplibregl-ctrl-group layer-switcher';
     controlContainer.appendChild(button);
 
-    this._updateList();
-
     return controlContainer;
   }
 
   onRemove() {
-    if (this._container.parentNode) {
-      this._container.parentNode.removeChild(this._container);
-    }
     this._map = undefined;
-  }
-
-  // Create a DOM element for a layer
-  _getLayerElement(item) {
-    if (item instanceof Layer) {
-      const li = document.createElement('li');
-      li.className = 'layer-item';
-
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.id = `layer-${item.id}`;
-      checkbox.checked = this._visible.includes(item.id);
-
-      checkbox.addEventListener('change', (e) => {
-        this.setVisibility(item.id, e.target.checked);
-      });
-
-      const label = document.createElement('label');
-      label.htmlFor = `layer-${item.id}`;
-      label.textContent = item.title;
-
-      li.appendChild(checkbox);
-      li.appendChild(label);
-
-      return li;
-    } else if (item instanceof LayerGroup) {
-      const li = document.createElement('li');
-      li.className = 'layer-group';
-
-      const heading = document.createElement('h4');
-      heading.textContent = item.title;
-      li.appendChild(heading);
-
-      const ul = document.createElement('ul');
-      for (let layer of item.layers) {
-        ul.appendChild(this._getLayerElement(layer));
-      }
-
-      li.appendChild(ul);
-      return li;
-    } else {
-      console.error('Unknown item type:', item);
-      return document.createElement('li');
-    }
-  }
-
-  // Update the layer list display
-  _updateList() {
-    // Clear existing items
-    while (this._layerList.firstChild) {
-      this._layerList.removeChild(this._layerList.firstChild);
-    }
-
-    // Add new items
-    for (let item of this._layers) {
-      this._layerList.appendChild(this._getLayerElement(item));
-    }
   }
 }
 
