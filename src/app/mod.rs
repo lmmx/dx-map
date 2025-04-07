@@ -472,6 +472,42 @@ pub fn app() -> Element {
         });
     });
 
+    // Add an effect to set up the layer panel connection
+    use_effect(move || {
+        with_context("app::layer_panel_connection", LogCategory::App, |logger| {
+            logger.info("Setting up layer panel connection to JavaScript");
+    
+            // Create a clone of the signal for the closure
+            let mut show_layers = show_layers_panel.clone();
+    
+            // Create a closure that will open the layer panel when called from JavaScript
+            let open_layer_panel_callback = Closure::wrap(Box::new(move || {
+                log::info_with_category(
+                    LogCategory::App,
+                    "openTflLayerPanel called from JavaScript",
+                );
+                show_layers.set(true);
+            }) as Box<dyn FnMut()>);
+    
+            // Expose the closure to JavaScript
+            if let Some(window) = window() {
+                if let Err(e) = js_sys::Reflect::set(
+                    &window,
+                    &JsValue::from_str("openTflLayerPanel"),
+                    open_layer_panel_callback.as_ref(),
+                ) {
+                    logger.error(&format!("Failed to set openTflLayerPanel: {:?}", e));
+                } else {
+                    logger.info("Successfully exposed openTflLayerPanel to JavaScript");
+                }
+            }
+    
+            // Forget the closure to prevent memory leaks
+            open_layer_panel_callback.forget();
+        });
+    });
+
+
     rsx! {
         LineCss {}
 
