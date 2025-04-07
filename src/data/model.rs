@@ -133,15 +133,15 @@ pub struct RouteSequence {
     /// Unique identifier for the line
     #[serde(rename = "LineId")]
     pub line_id: String,
-    /// Human-readable name of the line
-    #[serde(rename = "LineName")]
-    pub line_name: String,
+    // /// Human-readable name of the line
+    // #[serde(rename = "LineName")]
+    // pub line_name: String,
     /// Direction of the route (inbound/outbound)
     #[serde(rename = "Direction")]
     pub direction: String,
-    /// Whether this is an outbound-only route
-    #[serde(rename = "IsOutboundOnly")]
-    pub is_outbound_only: bool,
+    // /// Whether this is an outbound-only route
+    // #[serde(rename = "IsOutboundOnly")]
+    // pub is_outbound_only: bool,
     /// Transport mode (tube, bus, etc.)
     #[serde(rename = "Mode")]
     pub mode: String,
@@ -151,14 +151,14 @@ pub struct RouteSequence {
     // /// Stations along this route
     // #[serde(rename = "Stations")]
     // pub stations: Vec<MatchedStop>,
-    /// Detailed stop point sequences
-    #[serde(rename = "StopPointSequences")]
-    #[serde(default)]
-    pub stop_point_sequences: Vec<StopPointSequence>,
-    /// Ordered line routes
-    #[serde(rename = "OrderedLineRoutes")]
-    #[serde(default)]
-    pub ordered_line_routes: Vec<OrderedRoute>,
+    // /// Detailed stop point sequences
+    // #[serde(rename = "StopPointSequences")]
+    // #[serde(default)]
+    // pub stop_point_sequences: Vec<StopPointSequence>,
+    // /// Ordered line routes
+    // #[serde(rename = "OrderedLineRoutes")]
+    // #[serde(default)]
+    // pub ordered_line_routes: Vec<OrderedRoute>,
 }
 
 /// Represents a stop point sequence for a line

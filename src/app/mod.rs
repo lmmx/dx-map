@@ -88,6 +88,7 @@ pub fn app() -> Element {
     let mut simulation_initialized = use_signal(|| false);
     let mut simulation_is_paused = use_signal(|| true);
     let mut vehicle_count = use_signal(|| Option::<usize>::None);
+    let mut load_bus_routes = use_signal(|| false);
     let layers = use_signal(TflLayers::default);
     let mut tfl_data = use_signal(TflDataRepository::default);
 
@@ -101,7 +102,9 @@ pub fn app() -> Element {
 
                 // Use spawn_local for the async operation, but don't use logger inside
                 wasm_bindgen_futures::spawn_local(async move {
-                    match TflDataRepository::initialize().await {
+                    let should_load_buses = *load_bus_routes.read();
+
+                    match TflDataRepository::initialize(should_load_buses).await {
                         Ok(repository) => {
                             log::info_with_category(
                                 LogCategory::App,
@@ -124,6 +127,52 @@ pub fn app() -> Element {
                 logger.info("TfL data already loaded, skipping");
             }
         });
+    });
+
+    // Add an effect to reload data when bus routes toggle changes
+    use_effect(move || {
+        // Skip the initial render
+        static mut FIRST_RUN: bool = true;
+        let is_first_run = unsafe {
+            if FIRST_RUN {
+                FIRST_RUN = false;
+                true
+            } else {
+                false
+            }
+        };
+
+        if !is_first_run {
+            with_context("app::reload_tfl_data", LogCategory::App, |logger| {
+                let should_load_buses = *load_bus_routes.read();
+                logger.info(&format!(
+                    "Bus routes toggle changed to {}",
+                    should_load_buses
+                ));
+
+                // Reload data
+                wasm_bindgen_futures::spawn_local(async move {
+                    match TflDataRepository::initialize(should_load_buses).await {
+                        Ok(repository) => {
+                            log::info_with_category(
+                                LogCategory::App,
+                                &format!(
+                                    "TfL data reloaded with bus routes: {}",
+                                    should_load_buses
+                                ),
+                            );
+                            tfl_data.set(repository);
+                        }
+                        Err(e) => {
+                            log::error_with_category(
+                                LogCategory::App,
+                                &format!("Failed to reload TfL data: {}", e),
+                            );
+                        }
+                    }
+                });
+            });
+        }
     });
 
     // Add an effect to update the map when TFL data is loaded
@@ -456,6 +505,7 @@ pub fn app() -> Element {
             LayerPanel {
                 visible: *show_layers_panel.read(),
                 layers: layers,
+                load_bus_routes: load_bus_routes,
                 on_close: move |_| show_layers_panel.set(false)
             }
 

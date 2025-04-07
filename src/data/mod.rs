@@ -28,7 +28,7 @@ pub struct TflDataRepository {
 
 impl TflDataRepository {
     /// Initialize the data repository by loading all data
-    pub async fn initialize() -> Result<Self, String> {
+    pub async fn initialize(load_buses: bool) -> Result<Self, String> {
         log::info_with_category(LogCategory::App, "Initializing TFL data repository");
 
         // Load and process stations
@@ -46,7 +46,7 @@ impl TflDataRepository {
         let platforms_by_station = loader::group_platforms_by_station(platforms);
 
         // Load and process routes
-        let routes = loader::load_routes().await?;
+        let routes = loader::load_routes(load_buses).await?;
         let route_geometries = loader::process_route_geometries(&routes);
 
         log::info_with_category(

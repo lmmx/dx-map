@@ -9,7 +9,8 @@ use web_sys::Response;
 // Define asset paths for our data files
 const STATIONS_JSON_PATH: Asset = asset!("/assets/data/stations.json");
 const PLATFORMS_JSON_PATH: Asset = asset!("/assets/data/platforms.json");
-const ROUTES_JSON_PATH: Asset = asset!("/assets/data/routes.json");
+const RAIL_ROUTES_JSON_PATH: Asset = asset!("/assets/data/rail_routes.json");
+const BUS_ROUTES_JSON_PATH: Asset = asset!("/assets/data/bus_routes.json");
 
 /// Load stations from the JSON data file using fetch
 pub async fn load_stations() -> Result<Vec<Station>, String> {
@@ -161,87 +162,142 @@ pub fn group_platforms_by_station(
     map
 }
 
-/// Load routes from the JSON data file using fetch
-pub async fn load_routes() -> Result<HashMap<String, HashMap<String, Vec<RouteSequence>>>, String> {
-    log::info_with_category(LogCategory::App, "Loading routes from JSON data file");
+/// Load routes from the JSON data files using fetch
+pub async fn load_routes(
+    load_buses: bool,
+) -> Result<HashMap<String, HashMap<String, Vec<RouteSequence>>>, String> {
+    log::info_with_category(LogCategory::App, "Loading routes from JSON data files");
 
-    // Create a future to fetch the routes data
-    let window = web_sys::window().ok_or("No window object available")?;
-    let promise = window.fetch_with_str(
-        ROUTES_JSON_PATH
-            .resolve()
-            .to_str()
-            .expect("Failed to load routes JSON"),
-    );
+    // Create a function to fetch a routes file
+    async fn fetch_routes_file(file_path: &str) -> Result<RoutesFile, String> {
+        log::debug_with_category(
+            LogCategory::App,
+            &format!("Fetching routes from {}", file_path),
+        );
 
-    // Convert the Promise<Response> to a Future<Result<Response, JsValue>>
-    let response_future = wasm_bindgen_futures::JsFuture::from(promise);
+        let window = web_sys::window().ok_or("No window object available")?;
+        let promise = window.fetch_with_str(file_path);
 
-    // Await the response
-    let response_value = match response_future.await {
-        Ok(val) => val,
-        Err(e) => return Err(format!("Failed to fetch routes: {:?}", e)),
-    };
+        // Convert the Promise<Response> to a Future<Result<Response, JsValue>>
+        let response_future = wasm_bindgen_futures::JsFuture::from(promise);
 
-    let response: Response = response_value
-        .dyn_into()
-        .map_err(|_| "Failed to convert response")?;
+        // Await the response
+        let response_value = match response_future.await {
+            Ok(val) => val,
+            Err(e) => {
+                return Err(format!(
+                    "Failed to fetch routes from {}: {:?}",
+                    file_path, e
+                ));
+            }
+        };
 
-    if !response.ok() {
-        return Err(format!("HTTP error: {}", response.status()));
+        let response: Response = response_value
+            .dyn_into()
+            .map_err(|_| "Failed to convert response")?;
+
+        if !response.ok() {
+            return Err(format!("HTTP error: {}", response.status()));
+        }
+
+        // Get the response text
+        let text_promise = response
+            .text()
+            .map_err(|e| format!("Failed to get response text: {:?}", e))?;
+        let text_future = wasm_bindgen_futures::JsFuture::from(text_promise);
+
+        let text = match text_future.await {
+            Ok(val) => val.as_string().ok_or("Response is not a string")?,
+            Err(e) => return Err(format!("Failed to get response text: {:?}", e)),
+        };
+
+        // Parse the JSON
+        match serde_json::from_str::<RoutesFile>(&text) {
+            Ok(routes_file) => Ok(routes_file),
+            Err(e) => {
+                let error_msg = format!("Failed to parse routes JSON from {}: {}", file_path, e);
+                log::error_with_category(LogCategory::App, &error_msg);
+                Err(error_msg)
+            }
+        }
     }
 
-    // Get the response text
-    let text_promise = response
-        .text()
-        .map_err(|e| format!("Failed to get response text: {:?}", e))?;
-    let text_future = wasm_bindgen_futures::JsFuture::from(text_promise);
+    // Get paths as strings directly
+    let rail_routes_path = RAIL_ROUTES_JSON_PATH
+        .resolve()
+        .to_str()
+        .expect("Failed to load rail routes JSON")
+        .to_string(); // Convert to owned String to avoid temporary
 
-    let text = match text_future.await {
-        Ok(val) => val.as_string().ok_or("Response is not a string")?,
-        Err(e) => return Err(format!("Failed to get response text: {:?}", e)),
-    };
+    // Fetch rail routes
+    let rail_routes_file = fetch_routes_file(&rail_routes_path).await?;
 
-    // Parse the JSON
-    match serde_json::from_str::<RoutesFile>(&text) {
-        Ok(routes_file) => {
-            // Convert the nested HashMap to our desired format
-            let mut routes_map: HashMap<String, HashMap<String, Vec<RouteSequence>>> =
-                HashMap::new();
+    // Merge the route files
+    let mut routes_map: HashMap<String, HashMap<String, Vec<RouteSequence>>> = HashMap::new();
 
-            // Process each line and its directions
+    // Helper function to process routes from a file
+    let process_routes =
+        |routes_file: RoutesFile,
+         routes_map: &mut HashMap<String, HashMap<String, Vec<RouteSequence>>>| {
             for (line_id, directions) in routes_file.routes {
-                let mut direction_map: HashMap<String, Vec<RouteSequence>> = HashMap::new();
+                let mut direction_map: HashMap<String, Vec<RouteSequence>> =
+                    routes_map.get(&line_id).cloned().unwrap_or_default();
 
                 // Process each direction
                 for (direction, response) in directions {
                     if response.success {
                         direction_map.insert(direction, response.results);
                     } else {
-                        // Error out immediately (a failed response shouldn't have been stored)
-                        return Err(format!(
-                            "Unsuccessful response record for line {}, direction {}",
-                            line_id, direction
-                        ));
+                        log::warn_with_category(
+                            LogCategory::App,
+                            &format!(
+                                "Unsuccessful response for line {}, direction {}",
+                                line_id, direction
+                            ),
+                        );
                     }
                 }
 
                 routes_map.insert(line_id, direction_map);
             }
+        };
 
-            log::info_with_category(
-                LogCategory::App,
-                &format!("Successfully loaded routes for {} lines", routes_map.len()),
-            );
+    // Process rail routes first (higher priority)
+    process_routes(rail_routes_file, &mut routes_map);
 
-            Ok(routes_map)
+    // Only load bus routes if requested
+    if load_buses {
+        log::info_with_category(LogCategory::App, "Loading bus routes");
+        let bus_routes_path = BUS_ROUTES_JSON_PATH
+            .resolve()
+            .to_str()
+            .expect("Failed to load bus routes JSON")
+            .to_string();
+
+        // Fetch bus routes
+        match fetch_routes_file(&bus_routes_path).await {
+            Ok(bus_routes_file) => {
+                // Then process bus routes
+                process_routes(bus_routes_file, &mut routes_map);
+                log::info_with_category(LogCategory::App, "Bus routes loaded successfully");
+            }
+            Err(e) => {
+                log::warn_with_category(
+                    LogCategory::App,
+                    &format!("Failed to load bus routes, continuing without them: {}", e),
+                );
+            }
         }
-        Err(e) => {
-            let error_msg = format!("Failed to parse routes JSON: {}", e);
-            log::error_with_category(LogCategory::App, &error_msg);
-            Err(error_msg)
-        }
+    } else {
+        log::info_with_category(LogCategory::App, "Skipping bus routes as requested");
     }
+
+    log::info_with_category(
+        LogCategory::App,
+        &format!("Successfully loaded routes for {} lines", routes_map.len()),
+    );
+
+    Ok(routes_map)
 }
 
 /// Process route data to create a mapping of line ID to route geometry

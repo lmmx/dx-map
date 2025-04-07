@@ -2,7 +2,12 @@ use super::TflLayers;
 use dioxus::prelude::*;
 
 #[component]
-pub fn LayerPanel(visible: bool, layers: Signal<TflLayers>, on_close: EventHandler<()>) -> Element {
+pub fn LayerPanel(
+    visible: bool,
+    layers: Signal<TflLayers>,
+    load_bus_routes: Signal<bool>,
+    on_close: EventHandler<()>,
+) -> Element {
     rsx! {
         div {
             class: if visible { "layer-switcher-list active" } else { "layer-switcher-list" },
@@ -168,6 +173,24 @@ pub fn LayerPanel(visible: bool, layers: Signal<TflLayers>, on_close: EventHandl
                 label {
                     r#for: "cable_car",
                     "Cable Car"
+                }
+            }
+
+            div {
+                class: "layer-item",
+                input {
+                    r#type: "checkbox",
+                    id: "load_bus_routes",
+                    name: "load_bus_routes",
+                    checked: *load_bus_routes.read(),
+                    onchange: move |_| {
+                        let current_value = *load_bus_routes.read();
+                        load_bus_routes.set(!current_value);
+                    }
+                }
+                label {
+                    r#for: "load_bus_routes",
+                    "Load Bus Routes (requires reload)"
                 }
             }
 
