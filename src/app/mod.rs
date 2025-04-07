@@ -241,83 +241,95 @@ pub fn app() -> Element {
     // Initialize simulation JS when app loads
     use_effect(move || {
         with_context("app::simulation_init", LogCategory::App, |logger| {
+            // Only create the SimulationController if it doesn't already exist
+            if let Some(window) = window() {
+                if let Ok(simulation_controller) =
+                    js_sys::Reflect::get(&window, &JsValue::from_str("SimulationController"))
+                {
+                    if !simulation_controller.is_undefined() {
+                        // SimulationController already exists, no need to add the script
+                        // logger.debug("SimulationController already exists, skipping initialization");
+                        return;
+                    }
+                }
+            }
             logger.info("Initializing simulation controller script");
 
             let controller_script = format!(
                 r#"
-    // Global simulation controller
-    const SimulationController = {{
-      initialized: false,
-      running: false,
+                // Global simulation controller
+                const SimulationController = {{
+                  initialized: false,
+                  running: false,
 
-      initialize: function() {{
-        console.log("SimulationController.initialize() called");
-        if (this.initialized) {{
-          console.log("Simulation already initialized, skipping");
-          return;
-        }}
+                  initialize: function() {{
+                    console.log("SimulationController.initialize() called");
+                    if (this.initialized) {{
+                      console.log("Simulation already initialized, skipping");
+                      return;
+                    }}
 
-        // Call the Rust initialization function
-        if (typeof window.rust_initialize_simulation === 'function') {{
-          console.log("Calling rust_initialize_simulation()");
-          window.rust_initialize_simulation();
-          this.initialized = true;
-          this.running = true;
-        }} else {{
-          console.error("rust_initialize_simulation function not found");
-        }}
-      }},
+                    // Call the Rust initialization function
+                    if (typeof window.rust_initialize_simulation === 'function') {{
+                      console.log("Calling rust_initialize_simulation()");
+                      window.rust_initialize_simulation();
+                      this.initialized = true;
+                      this.running = true;
+                    }} else {{
+                      console.error("rust_initialize_simulation function not found");
+                    }}
+                  }},
 
-      toggle: function() {{
-        console.log("SimulationController.toggle() called");
-        if (!this.initialized) {{
-          this.initialize();
-          return;
-        }}
+                  toggle: function() {{
+                    console.log("SimulationController.toggle() called");
+                    if (!this.initialized) {{
+                      this.initialize();
+                      return;
+                    }}
 
-        if (typeof window.rust_toggle_simulation === 'function') {{
-          window.rust_toggle_simulation();
-          this.running = !this.running;
-          console.log("Simulation running:", this.running);
-        }}
-      }},
+                    if (typeof window.rust_toggle_simulation === 'function') {{
+                      window.rust_toggle_simulation();
+                      this.running = !this.running;
+                      console.log("Simulation running:", this.running);
+                    }}
+                  }},
 
-      reset: function() {{
-        console.log("SimulationController.reset() called");
-        if (typeof window.rust_reset_simulation === 'function') {{
-          window.rust_reset_simulation();
-          this.running = true;
-          console.log("Simulation reset and running");
-        }}
-      }}
-    }};
+                  reset: function() {{
+                    console.log("SimulationController.reset() called");
+                    if (typeof window.rust_reset_simulation === 'function') {{
+                      window.rust_reset_simulation();
+                      this.running = true;
+                      console.log("Simulation reset and running");
+                    }}
+                  }}
+                }};
 
-    // Make it globally available
-    window.SimulationController = SimulationController;
+                // Make it globally available
+                window.SimulationController = SimulationController;
 
-    // Only initialize automatically if simulation is enabled
-    const simulationEnabled = {0};
+                // Only initialize automatically if simulation is enabled
+                const simulationEnabled = {0};
 
-    if (simulationEnabled) {{
-      // Initialize when map is ready
-      if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
-        setTimeout(function() {{
-          SimulationController.initialize();
-        }}, 1000);
-      }} else {{
-        const initInterval = setInterval(function() {{
-          if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
-            clearInterval(initInterval);
-            setTimeout(function() {{
-              SimulationController.initialize();
-            }}, 1000);
-          }}
-        }}, 1000);
-      }}
-    }} else {{
-      console.log("Automatic simulation initialization disabled");
-    }}
-    "#,
+                if (simulationEnabled) {{
+                  // Initialize when map is ready
+                  if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
+                    setTimeout(function() {{
+                      SimulationController.initialize();
+                    }}, 1000);
+                  }} else {{
+                    const initInterval = setInterval(function() {{
+                      if (window.mapInstance && window.mapInstance.isStyleLoaded()) {{
+                        clearInterval(initInterval);
+                        setTimeout(function() {{
+                          SimulationController.initialize();
+                        }}, 1000);
+                      }}
+                    }}, 1000);
+                  }}
+                }} else {{
+                  console.log("Automatic simulation initialization disabled");
+                }}
+                "#,
                 layers.read().simulation
             );
 
@@ -326,7 +338,7 @@ pub fn app() -> Element {
             } else {
                 logger.info("Simulation controller script added successfully");
             }
-        })
+        });
     });
 
     use_effect(move || {
@@ -476,10 +488,10 @@ pub fn app() -> Element {
     use_effect(move || {
         with_context("app::layer_panel_connection", LogCategory::App, |logger| {
             logger.info("Setting up layer panel connection to JavaScript");
-    
+
             // Create a clone of the signal for the closure
             let mut show_layers = show_layers_panel.clone();
-    
+
             // Create a closure that will open the layer panel when called from JavaScript
             let open_layer_panel_callback = Closure::wrap(Box::new(move || {
                 log::info_with_category(
@@ -488,7 +500,7 @@ pub fn app() -> Element {
                 );
                 show_layers.set(true);
             }) as Box<dyn FnMut()>);
-    
+
             // Expose the closure to JavaScript
             if let Some(window) = window() {
                 if let Err(e) = js_sys::Reflect::set(
@@ -501,12 +513,11 @@ pub fn app() -> Element {
                     logger.info("Successfully exposed openTflLayerPanel to JavaScript");
                 }
             }
-    
+
             // Forget the closure to prevent memory leaks
             open_layer_panel_callback.forget();
         });
     });
-
 
     rsx! {
         LineCss {}

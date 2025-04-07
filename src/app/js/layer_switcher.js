@@ -19,7 +19,7 @@ class LayerSwitcher {
     this._visible = this._default_visible = Object.values(this._layerIndex)
       .filter(layer => layer.enabled)
       .map(layer => layer.id);
-      
+
     // Store instance for retrieval
     LayerSwitcher._instance = this;
   }
