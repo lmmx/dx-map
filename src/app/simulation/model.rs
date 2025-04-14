@@ -1,3 +1,4 @@
+use crate::tb8::Prediction;
 use crate::data::TflDataRepository;
 use crate::data::api::{fetch_arrivals_for_line, get_vehicle_type_for_line};
 use crate::utils::log::{LogCategory, debug_with_category, info_with_category, warn_with_category};
@@ -282,7 +283,7 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
                 );
 
                 // Group predictions by vehicle ID to avoid duplicates
-                let mut vehicle_map = std::collections::HashMap::new();
+                let mut vehicle_map = std::collections::HashMap::<String, Prediction>::new();
                 
                 for prediction in predictions {
                     // Skip if no vehicle ID or coordinates

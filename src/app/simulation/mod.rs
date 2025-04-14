@@ -7,7 +7,6 @@ use js_sys::{Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;
 
-mod api;
 mod model;
 mod state;
 
