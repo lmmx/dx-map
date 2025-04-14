@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 pub struct MetaData {
     pub request_time: DateTime<Utc>,
     pub response_time: DateTime<Utc>,
-    pub response_latency: f64,  // Duration in seconds
+    pub response_latency: f64, // Duration in seconds
     pub query: String,
 }
 

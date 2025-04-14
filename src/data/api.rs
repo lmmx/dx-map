@@ -1,7 +1,7 @@
 // src/data/api.rs
 use crate::app::simulation::VehicleType;
-use crate::utils::log::{self, LogCategory};
 use crate::tb8::{Prediction, Response as Tb8Response};
+use crate::utils::log::{self, LogCategory};
 use wasm_bindgen::JsCast;
 use web_sys::Response;
 
@@ -13,7 +13,10 @@ pub async fn fetch_arrivals_for_line(line_id: &str) -> Result<Vec<Prediction>, S
     );
 
     // Construct the API URL
-    let api_url = format!("https://tb8-rs-production.up.railway.app/arrivals-by-lines?query={}", line_id);
+    let api_url = format!(
+        "https://tb8-rs-production.up.railway.app/arrivals-by-lines?query={}",
+        line_id
+    );
 
     // Create a future to fetch the data
     let window = web_sys::window().ok_or("No window object available")?;
@@ -48,15 +51,14 @@ pub async fn fetch_arrivals_for_line(line_id: &str) -> Result<Vec<Prediction>, S
     };
 
     // Parse the JSON using your existing Prediction model
-    let response: Tb8Response<Prediction> = 
-        match serde_json::from_str(&text) {
-            Ok(resp) => resp,
-            Err(e) => {
-                let error_msg = format!("Failed to parse arrivals JSON: {}", e);
-                log::error_with_category(LogCategory::Simulation, &error_msg);
-                return Err(error_msg);
-            }
-        };
+    let response: Tb8Response<Prediction> = match serde_json::from_str(&text) {
+        Ok(resp) => resp,
+        Err(e) => {
+            let error_msg = format!("Failed to parse arrivals JSON: {}", e);
+            log::error_with_category(LogCategory::Simulation, &error_msg);
+            return Err(error_msg);
+        }
+    };
 
     // Check if the response was successful
     if !response.success {
@@ -65,7 +67,11 @@ pub async fn fetch_arrivals_for_line(line_id: &str) -> Result<Vec<Prediction>, S
 
     log::info_with_category(
         LogCategory::Simulation,
-        &format!("Successfully loaded {} arrivals for {}", response.results.len(), line_id),
+        &format!(
+            "Successfully loaded {} arrivals for {}",
+            response.results.len(),
+            line_id
+        ),
     );
 
     Ok(response.results)
@@ -77,11 +83,12 @@ pub fn get_vehicle_type_for_line(line_id: &str) -> VehicleType {
         "dlr" => VehicleType::Train,
         "elizabeth" => VehicleType::Train,
         "london-cable-car" => VehicleType::Train,
-        "waterloo-city" | "victoria" | "piccadilly" | "northern" | "metropolitan"
-        | "jubilee" | "hammersmith-city" | "district" | "circle" | "central"
-        | "bakerloo" => VehicleType::Train,
+        "waterloo-city" | "victoria" | "piccadilly" | "northern" | "metropolitan" | "jubilee"
+        | "hammersmith-city" | "district" | "circle" | "central" | "bakerloo" => VehicleType::Train,
         "thameslink" | "tram" => VehicleType::Train,
-        "liberty" | "lioness" | "mildmay" | "suffragette" | "weaver" | "windrush" => VehicleType::Train,
+        "liberty" | "lioness" | "mildmay" | "suffragette" | "weaver" | "windrush" => {
+            VehicleType::Train
+        }
         _ => VehicleType::Bus, // Default to bus for other IDs
     }
 }

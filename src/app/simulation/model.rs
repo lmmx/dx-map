@@ -1,6 +1,6 @@
-use crate::tb8::Prediction;
 use crate::data::TflDataRepository;
 use crate::data::api::{fetch_arrivals_for_line, get_vehicle_type_for_line};
+use crate::tb8::Prediction;
 use crate::utils::log::{LogCategory, debug_with_category, info_with_category, warn_with_category};
 use js_sys::Math;
 
@@ -269,9 +269,20 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
 
     // Try to fetch for each supported line - focus on a few key lines for the MVP
     let primary_lines = [
-        "victoria", "piccadilly", "northern", "jubilee", "central",
-        "district", "bakerloo", "waterloo-city", "circle", "hammersmith-city",
-        "metropolitan", "dlr", "elizabeth", "tram"
+        "victoria",
+        "piccadilly",
+        "northern",
+        "jubilee",
+        "central",
+        "district",
+        "bakerloo",
+        "waterloo-city",
+        "circle",
+        "hammersmith-city",
+        "metropolitan",
+        "dlr",
+        "elizabeth",
+        "tram",
     ];
 
     for line_id in primary_lines.iter() {
@@ -284,7 +295,7 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
 
                 // Group predictions by vehicle ID to avoid duplicates
                 let mut vehicle_map = std::collections::HashMap::<String, Prediction>::new();
-                
+
                 for prediction in predictions {
                     // Skip if no vehicle ID or coordinates
                     if prediction.vehicle_id.is_none() || prediction.time_to_station.is_none() {
@@ -292,11 +303,17 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
                     }
 
                     let vehicle_id = prediction.vehicle_id.clone().unwrap();
-                    
+
                     // Use this prediction if we haven't seen this vehicle before
                     // or if it's closer to arriving than the previous one
-                    if !vehicle_map.contains_key(&vehicle_id) || 
-                       prediction.time_to_station.unwrap() < vehicle_map.get(&vehicle_id).unwrap().time_to_station.unwrap() {
+                    if !vehicle_map.contains_key(&vehicle_id)
+                        || prediction.time_to_station.unwrap()
+                            < vehicle_map
+                                .get(&vehicle_id)
+                                .unwrap()
+                                .time_to_station
+                                .unwrap()
+                    {
                         vehicle_map.insert(vehicle_id, prediction);
                     }
                 }
@@ -304,9 +321,10 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
                 // Convert each unique vehicle to our simulation model
                 for (_, prediction) in vehicle_map {
                     // Skip if missing key data
-                    if prediction.line_id.is_none() || 
-                       prediction.time_to_station.is_none() ||
-                       prediction.current_location.is_none() {
+                    if prediction.line_id.is_none()
+                        || prediction.time_to_station.is_none()
+                        || prediction.current_location.is_none()
+                    {
                         continue;
                     }
 
@@ -314,7 +332,7 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
                     // use a random position around London (will be improved later)
                     let base_lon = -0.1278; // London center
                     let base_lat = 51.5074;
-                    
+
                     // Add some randomness - spread vehicles around London
                     let random_offset = (Math::random() - 0.5) * 0.1;
                     let lon = base_lon + random_offset;
@@ -349,7 +367,7 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
 
                     id_counter += 1;
                 }
-            },
+            }
             Err(e) => {
                 warn_with_category(
                     LogCategory::Simulation,
@@ -377,17 +395,28 @@ pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
 /// Create simple routes for real-time vehicles
 pub fn create_simple_routes_for_real_time() -> Vec<Route> {
     // For the MVP, just create one route per line type
-    // This is a simplified approach - in a full implementation, 
+    // This is a simplified approach - in a full implementation,
     // you'd want to use actual route data
-    
+
     let primary_lines = [
-        "victoria", "piccadilly", "northern", "jubilee", "central",
-        "district", "bakerloo", "waterloo-city", "circle", "hammersmith-city",
-        "metropolitan", "dlr", "elizabeth", "tram"
+        "victoria",
+        "piccadilly",
+        "northern",
+        "jubilee",
+        "central",
+        "district",
+        "bakerloo",
+        "waterloo-city",
+        "circle",
+        "hammersmith-city",
+        "metropolitan",
+        "dlr",
+        "elizabeth",
+        "tram",
     ];
-    
+
     let mut routes = Vec::new();
-    
+
     for (i, line_id) in primary_lines.iter().enumerate() {
         // Create a simple route with just two points
         // Central London coordinates
@@ -397,11 +426,11 @@ pub fn create_simple_routes_for_real_time() -> Vec<Route> {
             line_id: line_id.to_string(),
             vehicle_type: get_vehicle_type_for_line(line_id),
             stations: vec![
-                (-0.1278, 51.5074),  // London center
-                (-0.1178, 51.5174),  // A short distance away
+                (-0.1278, 51.5074), // London center
+                (-0.1178, 51.5174), // A short distance away
             ],
         });
     }
-    
+
     routes
 }
