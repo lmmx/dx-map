@@ -1,3 +1,4 @@
+pub mod api;
 pub mod line_definitions;
 pub mod loader;
 pub mod map_helpers;

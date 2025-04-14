@@ -1,5 +1,6 @@
 use crate::data::TflDataRepository;
-use crate::utils::log::{LogCategory, warn_with_category};
+use crate::data::api::{fetch_arrivals_for_line, get_vehicle_type_for_line};
+use crate::utils::log::{LogCategory, debug_with_category, info_with_category, warn_with_category};
 use js_sys::Math;
 
 #[derive(Clone, Debug)]
@@ -251,4 +252,155 @@ pub fn initialize_vehicles(routes: &[Route]) -> Vec<Vehicle> {
     }
 
     vehicles
+}
+
+// --- Real arrivals data based simulation ---
+
+/// Build routes and vehicles from real-time arrival data
+pub async fn build_real_time_vehicles() -> Result<Vec<Vehicle>, String> {
+    info_with_category(
+        LogCategory::Simulation,
+        "Building vehicles from real-time arrival data",
+    );
+
+    let mut vehicles = Vec::new();
+    let mut id_counter = 0;
+
+    // Try to fetch for each supported line - focus on a few key lines for the MVP
+    let primary_lines = [
+        "victoria", "piccadilly", "northern", "jubilee", "central",
+        "district", "bakerloo", "waterloo-city", "circle", "hammersmith-city",
+        "metropolitan", "dlr", "elizabeth", "tram"
+    ];
+
+    for line_id in primary_lines.iter() {
+        match fetch_arrivals_for_line(line_id).await {
+            Ok(predictions) => {
+                debug_with_category(
+                    LogCategory::Simulation,
+                    &format!("Processing {} arrivals for {}", predictions.len(), line_id),
+                );
+
+                // Group predictions by vehicle ID to avoid duplicates
+                let mut vehicle_map = std::collections::HashMap::new();
+                
+                for prediction in predictions {
+                    // Skip if no vehicle ID or coordinates
+                    if prediction.vehicle_id.is_none() || prediction.time_to_station.is_none() {
+                        continue;
+                    }
+
+                    let vehicle_id = prediction.vehicle_id.clone().unwrap();
+                    
+                    // Use this prediction if we haven't seen this vehicle before
+                    // or if it's closer to arriving than the previous one
+                    if !vehicle_map.contains_key(&vehicle_id) || 
+                       prediction.time_to_station.unwrap() < vehicle_map.get(&vehicle_id).unwrap().time_to_station.unwrap() {
+                        vehicle_map.insert(vehicle_id, prediction);
+                    }
+                }
+
+                // Convert each unique vehicle to our simulation model
+                for (_, prediction) in vehicle_map {
+                    // Skip if missing key data
+                    if prediction.line_id.is_none() || 
+                       prediction.time_to_station.is_none() ||
+                       prediction.current_location.is_none() {
+                        continue;
+                    }
+
+                    // This would be better with actual coordinates, but for MVP just
+                    // use a random position around London (will be improved later)
+                    let base_lon = -0.1278; // London center
+                    let base_lat = 51.5074;
+                    
+                    // Add some randomness - spread vehicles around London
+                    let random_offset = (Math::random() - 0.5) * 0.1;
+                    let lon = base_lon + random_offset;
+                    let lat = base_lat + random_offset;
+
+                    // Convert the time to station into a position (0.0 to 1.0)
+                    // Closer to arrival = closer to station (higher position value)
+                    let time_to_station = prediction.time_to_station.unwrap() as f64;
+                    let max_time = 600.0; // 10 minutes as max
+                    let position = (max_time - time_to_station.min(max_time)) / max_time;
+
+                    // Determine direction (1 = toward, -1 = away)
+                    let direction = 1; // Default to moving toward station
+
+                    // Get line ID
+                    let line_id = prediction.line_id.unwrap();
+
+                    // Create a vehicle
+                    vehicles.push(Vehicle {
+                        id: id_counter,
+                        vehicle_type: get_vehicle_type_for_line(&line_id),
+                        route_index: 0, // We'll set this correctly when we build routes
+                        line_id: line_id,
+                        position,
+                        speed: 0.01, // Default speed
+                        direction,
+                        last_station: 0,
+                        next_station: 1,
+                        lng: lon,
+                        lat: lat,
+                    });
+
+                    id_counter += 1;
+                }
+            },
+            Err(e) => {
+                warn_with_category(
+                    LogCategory::Simulation,
+                    &format!("Failed to fetch arrivals for {}: {}", line_id, e),
+                );
+                // Continue with other lines if one fails
+                continue;
+            }
+        }
+    }
+
+    // If we got zero vehicles, return an error so we can fall back to sample data
+    if vehicles.is_empty() {
+        return Err("No real-time vehicles found".to_string());
+    }
+
+    info_with_category(
+        LogCategory::Simulation,
+        &format!("Built {} vehicles from real-time data", vehicles.len()),
+    );
+
+    Ok(vehicles)
+}
+
+/// Create simple routes for real-time vehicles
+pub fn create_simple_routes_for_real_time() -> Vec<Route> {
+    // For the MVP, just create one route per line type
+    // This is a simplified approach - in a full implementation, 
+    // you'd want to use actual route data
+    
+    let primary_lines = [
+        "victoria", "piccadilly", "northern", "jubilee", "central",
+        "district", "bakerloo", "waterloo-city", "circle", "hammersmith-city",
+        "metropolitan", "dlr", "elizabeth", "tram"
+    ];
+    
+    let mut routes = Vec::new();
+    
+    for (i, line_id) in primary_lines.iter().enumerate() {
+        // Create a simple route with just two points
+        // Central London coordinates
+        routes.push(Route {
+            id: i,
+            name: format!("{} (segment 0)", line_id),
+            line_id: line_id.to_string(),
+            vehicle_type: get_vehicle_type_for_line(line_id),
+            stations: vec![
+                (-0.1278, 51.5074),  // London center
+                (-0.1178, 51.5174),  // A short distance away
+            ],
+        });
+    }
+    
+    routes
 }
