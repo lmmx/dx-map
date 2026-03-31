@@ -8,7 +8,7 @@ mod canvas;
 mod key_panel;
 mod layer_panel;
 mod line_css;
-mod simulation;
+pub mod simulation;
 mod simulation_panel; // New module for vehicle simulation
 
 use crate::app::line_css::LineCss;

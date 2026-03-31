@@ -7,7 +7,6 @@ use js_sys::{Object, Reflect};
 use wasm_bindgen::{JsCast, JsValue, closure::Closure};
 use web_sys::window;
 
-// Import from our modules
 mod model;
 mod state;
 
@@ -16,6 +15,113 @@ pub use state::{
     SimulationState, get_animation_frame_id, get_vehicle_count, initialize_state, is_paused,
     set_animation_frame_id, toggle_pause, with_simulation_state, with_simulation_state_ref,
 };
+
+// Real arrivals data simulation
+// ------------------------------
+
+// Replace or update your initialize_simulation function
+pub fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
+    with_context("initialize_simulation", LogCategory::Simulation, |logger| {
+        logger.info("Initializing vehicle simulation with real-time data...");
+
+        // Set a global flag to track simulation visibility
+        let js_code = r#"
+        window.simulationVisible = true;
+        console.log('Set window.simulationVisible = true');
+        "#;
+        let _ = js_sys::eval(js_code);
+
+        // First try to get real-time data
+        use_real_time_data(tfl_data.clone());
+
+        logger.info("Simulation initialization requested");
+    });
+}
+
+// Function to attempt using real-time data
+fn use_real_time_data(tfl_data: Option<TflDataRepository>) {
+    with_context("use_real_time_data", LogCategory::Simulation, |logger| {
+        logger.info("Attempting to use real-time vehicle data");
+
+        // Spawn a local future to fetch the data
+        wasm_bindgen_futures::spawn_local(async move {
+            match model::build_real_time_vehicles().await {
+                Ok(vehicles) => {
+                    log::info_with_category(
+                        LogCategory::Simulation,
+                        &format!("Successfully built {} real-time vehicles", vehicles.len()),
+                    );
+
+                    // Create routes for these vehicles
+                    let routes = model::create_simple_routes_for_real_time();
+
+                    // Assign routes to vehicles
+                    let mut route_mapped_vehicles = vehicles;
+                    for vehicle in &mut route_mapped_vehicles {
+                        // Find a route matching this vehicle's line_id
+                        for route in &routes {
+                            if route.line_id == vehicle.line_id {
+                                vehicle.route_index = route.id;
+                                break;
+                            }
+                        }
+                    }
+
+                    // Initialize state with real-time data
+                    initialize_state(routes, route_mapped_vehicles);
+
+                    // Register with MapLibre and start animation
+                    register_vehicle_layers();
+                    start_animation_loop();
+
+                    log::info_with_category(
+                        LogCategory::Simulation,
+                        "Real-time simulation initialized successfully",
+                    );
+                }
+                Err(e) => {
+                    // Fall back to sample/TfL data
+                    log::warn_with_category(
+                        LogCategory::Simulation,
+                        &format!(
+                            "Failed to build real-time vehicles: {}. Falling back to static data.",
+                            e
+                        ),
+                    );
+                    use_fallback_data(tfl_data);
+                }
+            }
+        });
+    });
+}
+
+// Fallback to existing data methods
+fn use_fallback_data(tfl_data: Option<TflDataRepository>) {
+    with_context("use_fallback_data", LogCategory::Simulation, |logger| {
+        logger.info("Using fallback sample/TfL data for simulation");
+
+        // Build routes from real TfL data if available, otherwise use sample routes
+        let routes = match tfl_data {
+            Some(repo) => build_routes_from_tfl_data(&repo),
+            None => {
+                logger.warn("No TfL data provided, using sample routes");
+                build_sample_routes()
+            }
+        };
+
+        // Initialize vehicles on those routes
+        let vehicles = initialize_vehicles(&routes);
+
+        // Store in global state
+        initialize_state(routes, vehicles);
+
+        // Register with MapLibre and start animation
+        register_vehicle_layers();
+        start_animation_loop();
+
+        logger.info("Fallback simulation initialized");
+    });
+}
 
 // MapLibre integration components
 // ------------------------------
@@ -105,40 +211,40 @@ pub fn expose_simulation_functions(tfl_data: Option<TflDataRepository>) -> Resul
 // SIMULATION FUNCTIONS
 // -------------------
 
-/// Initialize the vehicle simulation
-pub fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
-    with_context("initialize_simulation", LogCategory::Simulation, |logger| {
-        logger.info("Initializing vehicle simulation...");
-
-        // Set a global flag to track simulation visibility
-        let js_code = r#"
-        window.simulationVisible = true;
-        console.log('Set window.simulationVisible = true');
-        "#;
-        let _ = js_sys::eval(js_code);
-
-        // Build routes from real TfL data if available, otherwise use sample routes
-        let routes = match tfl_data {
-            Some(repo) => build_routes_from_tfl_data(&repo),
-            None => {
-                logger.warn("No TfL data provided, using sample routes");
-                build_sample_routes()
-            }
-        };
-
-        // Initialize vehicles on those routes
-        let vehicles = initialize_vehicles(&routes);
-
-        // Store in global state
-        initialize_state(routes, vehicles);
-
-        // Register with MapLibre and start animation
-        register_vehicle_layers();
-        start_animation_loop();
-
-        logger.info("Simulation initialized");
-    });
-}
+// /// Initialize the vehicle simulation
+// pub fn initialize_simulation(tfl_data: Option<TflDataRepository>) {
+//     with_context("initialize_simulation", LogCategory::Simulation, |logger| {
+//         logger.info("Initializing vehicle simulation...");
+//
+//         // Set a global flag to track simulation visibility
+//         let js_code = r#"
+//         window.simulationVisible = true;
+//         console.log('Set window.simulationVisible = true');
+//         "#;
+//         let _ = js_sys::eval(js_code);
+//
+//         // Build routes from real TfL data if available, otherwise use sample routes
+//         let routes = match tfl_data {
+//             Some(repo) => build_routes_from_tfl_data(&repo),
+//             None => {
+//                 logger.warn("No TfL data provided, using sample routes");
+//                 build_sample_routes()
+//             }
+//         };
+//
+//         // Initialize vehicles on those routes
+//         let vehicles = initialize_vehicles(&routes);
+//
+//         // Store in global state
+//         initialize_state(routes, vehicles);
+//
+//         // Register with MapLibre and start animation
+//         register_vehicle_layers();
+//         start_animation_loop();
+//
+//         logger.info("Simulation initialized");
+//     });
+// }
 
 /// Register vehicle layers with MapLibre GL
 fn register_vehicle_layers() {
