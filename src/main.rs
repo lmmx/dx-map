@@ -6,6 +6,7 @@ use log::Level;
 mod app;
 mod data;
 mod maplibre; // Add the new MapLibre module
+mod tb8;
 mod utils; // Add the new utils module
 
 use utils::{LogLevel, set_log_level};
